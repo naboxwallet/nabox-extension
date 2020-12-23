@@ -1,0 +1,99 @@
+import Vue from "vue";
+import VueRouter from "vue-router";
+// import Home from "../views/home/Home.vue";
+
+Vue.use(VueRouter);
+
+// 解决跳转当前路由报错问题
+const originalPush = VueRouter.prototype.push;
+VueRouter.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch(err => err);
+};
+
+const routes = [
+  {
+    path: "/",
+    name: "Home",
+    component: () => import("../views/home/Home.vue")
+  },
+  {
+    path: "/inner-transfer",
+    name: "InnerTransfer",
+    component: () => import("../views/Transfer/InnerTransfer.vue")
+  },
+  {
+    path: "/in-chain-transfer",
+    name: "InChainTransfer",
+    component: () => import("../views/Transfer/InChainTransfer.vue")
+  },
+  {
+    path: "/cross-chain-transfer",
+    name: "CrossChainTransfer",
+    component: () => import("../views/Transfer/CrossChainTransfer.vue")
+  },
+  {
+    path: "/cross-txlist",
+    name: "CrossTxList",
+    component: () => import("../views/crossTxList/CrossTxList.vue")
+  },
+  {
+    path: "/transfer-info",
+    name: "TransferInfo",
+    component: () => import("../views/transferInfo/TransferInfo.vue")
+  },
+  {
+    path: "/account-manage",
+    name: "AccountManage",
+    component: () => import("../views/accountManage/AccountManage.vue")
+  },
+  {
+    path: "/add-asset",
+    name: "AddAsset",
+    component: () => import("../views/addAsset/AddAsset.vue")
+  },
+  {
+    path: "/asset-info",
+    name: "AssetInfo",
+    component: () => import("../views/assetInfo/AssetInfo.vue")
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: () => import("../views/users/Login.vue")
+  },
+  {
+    path: "/lock",
+    name: "Lock",
+    component: () => import("../views/users/Lock.vue")
+  },
+  {
+    path: "/backup",
+    name: "Backup",
+    component: () => import("../views/users/Backup.vue")
+  },
+  {
+    path: "/new-address",
+    name: "NewAddress",
+    component: () => import("../views/users/NewAddress.vue")
+  },
+  {
+    path: "/authorization",
+    name: "Authorization",
+    component: () => import("../views/users/Authorization.vue")
+  },
+  {
+    path: "/about",
+    name: "About",
+    // route level code-splitting
+    // this generates a separate chunk (about.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () =>
+      import(/* webpackChunkName: "about" */ "../views/About.vue")
+  }
+];
+
+const router = new VueRouter({
+  routes
+});
+
+export default router;
