@@ -197,16 +197,15 @@ export class NTransfer {
     return { inputs, outputs };
   }
   // nuls nerve跨链转账input output
-  crossChainTransaction(transferInfo) {
-    const { inputs, outputs } = this.transferTransaction();
-    // const CROSS_INFO = JSON.parse(sessionStorage.getItem("config"))[this.network]["NULS"];
-    const CROSS_INFO = {};
+  async crossChainTransaction(transferInfo) {
+    const { inputs, outputs } = await this.transferTransaction(transferInfo);
+    const CROSS_INFO = JSON.parse(sessionStorage.getItem("config"))[this.network]["NULS"];
     if (this.chain === "NERVE") {
       // nerve资产跨链到nuls,要收取nuls手续费
       let isNULS = false;
       const fee = timesDecimals(crossFee, 8);
       for (let input of inputs) {
-        if (input.assetsChainId === CROSS_INFO.chainId &&input.assetsId === CROSS_INFO.assetsId) {
+        if (input.assetsChainId === CROSS_INFO.chainId &&input.assetsId === CROSS_INFO.assetId) {
           //跨链资产为nuls
           isNULS = true;
           input.amount = Plus(input.amount, fee).toFixed();
@@ -215,7 +214,11 @@ export class NTransfer {
       if (!isNULS) {
         // 跨链资产不是nuls
         // const balanceInfo = await getBaseAssetInfo(CROSS_INFO.chainId, CROSS_INFO.assetId, this.from);
-        const nonce = ""; // nuls nonce值
+        const nonce = await this.getNonce({
+          from: transferInfo.from,
+          assetsChainId: CROSS_INFO.chainId,
+          assetsId: CROSS_INFO.assetId
+        });
         inputs.push({
           address: transferInfo.from,
           assetsChainId: CROSS_INFO.chainId,
@@ -256,6 +259,7 @@ export class NTransfer {
     return { inputs, outputs };
   }
   async getNonce(info) {
+    console.log(info, 999)
     try {
       const res = await request({
         url: "/wallet/address/asset",

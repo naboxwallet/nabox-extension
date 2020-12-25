@@ -3,9 +3,9 @@
     <div class="setting-wrap" v-show="visiable">
       <div class="mask" @click="close"></div>
       <div class="settings-modal shadow">
-        <!-- <div class="common-pd setting-item" @click="viewOnBrowser">
+        <div class="common-pd setting-item" @click="viewOnBrowser">
           展开视图
-        </div> -->
+        </div>
         <div class="common-pd switch-account border">
           {{ $t("header.header4") }}
           <el-button type="warning" class="fr" @click="$router.push('/lock')">

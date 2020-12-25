@@ -129,6 +129,7 @@ export default {
     Modal
   },
   mounted() {
+    window.bb = 123
     this.$store.dispatch("setAccount", [...this.$store.state.accountList]);
   },
   methods: {

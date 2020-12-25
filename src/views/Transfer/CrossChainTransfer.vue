@@ -30,12 +30,16 @@
             </el-form-item>
             <el-form-item :label="$t('public.symbol')">
               <el-select v-model="transferModal.symbol">
-                <el-option label="区域一" value="shanghai"></el-option>
-                <el-option label="区域二" value="beijing"></el-option>
+                <el-option
+                  v-for="item in assetsList"
+                  :key="item.ids"
+                  :label="item.symbol"
+                  :value="item.ids"
+                ></el-option>
               </el-select>
             </el-form-item>
             <span class="available">
-              {{ $t("public.available") + ": " }}132465.77
+              {{ $t("public.available") + ": " }}{{ chooseAsset.balance }}
             </span>
             <el-form-item :label="$t('public.amount')" prop="amount">
               <el-input v-model="transferModal.amount">
@@ -133,7 +137,7 @@
 <script>
 import CommonHead from "@/components/CommonHead";
 import TransferConfirm from "@/components/TransferConfirm";
-import { superLong, timesDecimals, Plus, Division, Times } from "@/utils/util";
+import { superLong, timesDecimals, Plus, Division, Times, divisionDecimals } from "@/utils/util";
 import nerve from "nerve-sdk-js";
 import sdk from "nerve-sdk-js/lib/api/sdk";
 import utils from "nuls-sdk-js/lib/utils/utils";
@@ -191,7 +195,10 @@ export default {
       } else if (value > this.available) {
         callback(new Error(this.$t("transfer.transfer4") + ": " + this.available));
       } else {
-        if (this.chain === "NULS") this.validateParameter();
+        if (this.chain === "NULS") {
+          // if (this.chooseAsset.contractAddress) this.contractInfoByContractAddress(this.assetsInfo.contractAddress)
+          this.validateParameter();
+        }
         callback();
       }
     };
@@ -202,7 +209,7 @@ export default {
         from: "",
         network: "",
         to: "",
-        symbol: "NULS",
+        symbol: "",
         amount: "",
         remarks: "",
         gas: 1,
@@ -222,7 +229,7 @@ export default {
       showConfirm: false,
       feeSymbol: "", //手续费符号
       speedUpFee: false, // eth bsc加速
-      feeLoading: true,
+      feeLoading: false,
       custom: false, // nerve提现到eth bsc是否自定义手续费
       feeType: 2, //手续费等级 1：慢，2：中，3：快
       withdrawalFee: "", //提现手续费
@@ -282,11 +289,12 @@ export default {
   },
 
   async created() {
-    const { address, chain, assetChainId, assetId } = this.$route.query;
+    const { address, chain, assetChainId, assetId, contractAddress } = this.$route.query;
     this.chain = chain;
     this.transferModal.from = address;
     this.assetChainId = assetChainId;
     this.assetId = assetId;
+    this.contractAddress = contractAddress;
     const feeSymbol = {
       NULS: "NULS",
       NERVE: "NVT",
@@ -294,7 +302,7 @@ export default {
       BSC: "BNB"
     };
     this.feeSymbol = feeSymbol[this.chain];
-    // await this.getAssetsList();
+    await this.getAssetsList();
     if (this.chain === "Ethereum" || this.chain === "BSC") {
       this.eTransfer = new ETransfer({
         chain: this.chain,
@@ -302,6 +310,10 @@ export default {
       });
       console.log(this.$store.state.network, 888,this.chain)
       this.getGasPrice();
+    } else {
+      const network = this.$store.state.network;
+      const config = JSON.parse(sessionStorage.getItem("config"));
+      this.MAIN_INFO = config[network][this.chain];
     }
   },
 
@@ -318,6 +330,11 @@ export default {
     superLong(str, len = 12) {
       return superLong(str, len);
     },
+    getKey(item) {
+      return item.contractAddress
+        ? item.contractAddress
+        : item.chainId + "-" + item.assetId;
+    },
     async getAssetsList() {
       const params = {
         chain: this.chain,
@@ -329,9 +346,16 @@ export default {
       });
       if (res.code === 1000) {
         res.data.map(v => {
-          if (v.chainId === this.assetChainId && v.assetId === this.assetId) {
+          v.balance = divisionDecimals(v.balance, v.decimals);
+          v.ids = this.getKey(v);
+          if (this.contractAddress && this.contractAddress === v.contractAddress) {
             this.chooseAsset = v;
-            this.transferModal.symbol = v.symbol;
+            this.transferModal.symbol = v.contractAddress;
+          } else {
+            if (v.chainId == this.assetChainId && v.assetId == this.assetId) {
+              this.chooseAsset = v;
+              this.transferModal.symbol = v.chainId + "-" + v.assetId;
+            }
           }
         });
         this.assetsList = res.data;
@@ -384,6 +408,7 @@ export default {
     validateParameter() {
       // 默认普通转账type=2  eth，bsc不涉及type
       this.nulsType = "";
+      this.type = 10;
       if (this.chain === "NULS") {
         if (!this.transferModal.to || !this.transferModal.amount) return;
         /* let validParams = false;
@@ -396,6 +421,7 @@ export default {
         if (this.chooseAsset.contractAddress) {
           // nuls 合约资产跨链转账
           this.nulsType = "tokenCross";
+          this.type = 16;
           this.transferCrossChain();
         } else {
           // nuls 本链资产跨链
@@ -511,9 +537,8 @@ export default {
             return;
           }
           let newArgs = utils.twoDimensionalArray(args, contractConstructorArgsTypes.data);
-          const MAIN_INFO = {};
           this.contractCallData = {
-            chainId: MAIN_INFO.chainId,
+            chainId: this.MAIN_INFO.chainId,
             sender: sender,
             contractAddress: contractAddress,
             value: value,
@@ -569,7 +594,6 @@ export default {
       const network = this.$store.state.network;
       let txHex = "";
       if (this.chain === "NULS" || this.chain === "NERVE") {
-        const MAIN_INFO = {};
         const transfer = new NTransfer({
           chain: this.chain,
           network,
@@ -579,25 +603,47 @@ export default {
           from: this.transferModal.from,
           to: this.transferModal.to,
           assetsChainId: this.chooseAsset.chainId,
-          assetsId: this.chooseAsset.assetsId,
+          assetsId: this.chooseAsset.assetId,
           amount: timesDecimals(this.transferModal.amount, this.chooseAsset.decimals),
-          fee: timesDecimals(this.fee, MAIN_INFO.decimals)
+          fee: timesDecimals(this.fee, this.MAIN_INFO.decimal)
         };
         if (this.type === 16) {
-          if (this.nulsType === "nulsToContract") {
+          //nuls 合约token跨链
+          transferInfo.assetsChainId = this.MAIN_INFO.chainId;
+          transferInfo.assetsId = this.MAIN_INFO.assetId;
+          transferInfo.amount = Plus(20000000, Times(this.transferModal.gas, this.transferModal.price)).toFixed();
+          transferInfo.toContractValue = 10000000;
+          transferInfo.to = this.chooseAsset.contractAddress;
+          /* if (this.nulsType === "nulsToContract") {
             //向合约地址转nuls
-            this.contractCallData.chainId = MAIN_INFO.chainId;
+            this.contractCallData.chainId = this.MAIN_INFO.chainId;
             transferInfo.value = transferInfo.amount;
             transferInfo.amount = Plus(transferInfo.fee, Times(this.transferModal.gas, this.transferModal.price)).toFixed();
             transferInfo.amount = Plus(transferInfo.amount, transferInfo.value).toFixed();
           } else if (this.nulsType === "tokenTransfer") {
             // token转账 向合约地址转token
             transferInfo.amount = Plus(0, Times(this.transferModal.gas, this.transferModal.price)).toFixed();
-          }
+          } */
         }
         const inputOuput = await transfer.inputsOrOutputs(transferInfo);
         const txData = this.type === 16 ? this.contractCallData : {};
-        txHex = await transfer.getTxHex(inputOuput.inputs, inputOuput.outputs, this.transferModal.remarks, txData);
+        // txHex = await transfer.getTxHex(inputOuput.inputs, inputOuput.outputs, this.transferModal.remarks, txData);
+        try {
+          txHex = await transfer.getTxHex({
+            inputs: inputOuput.inputs,
+            outputs: inputOuput.outputs,
+            remarks: this.transferModal.remarks,
+            txData
+          });
+        } catch (e) {
+          console.error("跨链交易签名失败" + e);
+          this.loading = false;
+          this.$message({
+            type: "error",
+            message: e,
+            duration: 2000
+          });
+        }
       } else {
         txHex = await this.eTransfer.getTxHex({
           to: this.transferModal.to,

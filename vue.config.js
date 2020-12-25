@@ -1,8 +1,12 @@
 const CopyPlugin = require("copy-webpack-plugin");
 const path = require("path");
-const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin
+const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
 module.exports = {
   pages: {
+    /* inPage: {
+      entry: path.join(__dirname, "./src/inPage.js"),
+      chunks: []
+    }, */
     //弹出插件
     popup: {
       template: "public/browser-extension.html",
@@ -65,15 +69,29 @@ module.exports = {
       }
     }
   },
+  productionSourceMap: false, //关闭sourceMap
   configureWebpack: config => {
-    config.plugins.push(
+    /* config.plugins.push(
       new CopyPlugin([
         {
           from: path.resolve(__dirname, "./src/inPage.js"),
           to: path.resolve(__dirname, "./dist/js")
         }
       ])
-    );
+    ); */
     // config.plugins.push(new BundleAnalyzerPlugin())
+    // config.optimization.minimizer[0] = {}; //无效
+  },
+  chainWebpack: config => {
+    config
+      .entry("inPage")
+      .add("./src/inPage.js")
+      .end() //单独打包inPage
+      .output.filename("js/[name].js"); // .libraryTarget("commonjs");
+    config.optimization.delete("splitChunks"); //去除代码分割, 否则inPage中的变量不能被web识别
+    config.optimization.minimize(false); // 去除代代码压缩
+    /* config.when(process.env.NODE_ENV === "production", config => {
+      config.
+    }); */
   }
 };

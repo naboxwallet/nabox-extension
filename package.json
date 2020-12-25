@@ -14,6 +14,7 @@
     "core-js": "^3.6.5",
     "element-ui": "^2.13.2",
     "ethers": "4",
+    "eventemitter3": "^4.0.7",
     "nerve-sdk-js": "^1.0.3",
     "nuls-sdk-js": "^2.4.7",
     "qrcodejs2": "^0.0.2",
