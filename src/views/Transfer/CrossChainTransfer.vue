@@ -235,7 +235,8 @@ export default {
       withdrawalFee: "", //提现手续费
       withdrawalFeeForETH: "", //提现手续费兑eth
       ETHToNVT: "", // 异构网络币价格兑NVT
-      selectHeterogeneousChain: "ETH"
+      selectHeterogeneousChain: "ETH",
+      type: 10, //nerve nuls 交易类型
     };
   },
 
@@ -594,6 +595,7 @@ export default {
       const network = this.$store.state.network;
       let txHex = "";
       if (this.chain === "NULS" || this.chain === "NERVE") {
+        console.log(this.type, 999)
         const transfer = new NTransfer({
           chain: this.chain,
           network,

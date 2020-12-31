@@ -13,21 +13,21 @@ export default {
   data() {
     return {};
   },
+  created() {
+    const loading = document.getElementById("file-loading");
+    if (loading) {
+      loading.style.display = "none";
+    }
+  },
   async mounted() {
     // await ExtensionPlatform.clear(); //清除本地数据
+    await ExtensionPlatform.remove("naboxBridge");
     const accountList =
       (await ExtensionPlatform.get("accountList")).accountList || [];
     console.log(accountList, 888);
     const network = (await ExtensionPlatform.get("network")).network || "main";
-    console.log(network, "===network");
     this.$store.commit("setAccount", accountList);
     this.$store.commit("setNetwork", network);
-    /* const a = await this.$request({
-      url: "/",
-      method: "get",
-      data: {a:1},
-      network: "beta"
-    }) */
   }
 };
 </script>

@@ -85,6 +85,12 @@ class ExtensionPlatform {
     });
   }
 
+  closeCurrentWindow() {
+    return chrome.windows.getCurrent(windowDetails => {
+      return chrome.windows.remove(windowDetails.id);
+    });
+  }
+
   openExtensionInBrowser(route = null, queryString = null) {
     let extensionURL = chrome.runtime.getURL("home.html");
 

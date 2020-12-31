@@ -25,7 +25,6 @@ router.beforeEach(async (to, from, next) => {
     next();
   }
 });
-window.aaa = 111
 Vue.prototype.$request = request;
 
 async function getConfig() {

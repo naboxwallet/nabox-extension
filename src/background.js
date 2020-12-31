@@ -1,43 +1,116 @@
 import ExtensionPlatform from "@/utils/extension";
+import NotificationService from "@/utils/NotificationService";
 
-const WIDTH = 366;
-const HEIGHT = 639;
-let popUpId = "";
-// popup 页面能直接调用此文件内函数
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-  // console.log("Hello from the background", request);
-  if (request.type === "connect") {
-    await ExtensionPlatform.set({
-      invokeOrigin: request.url
+class Prompt {
+  constructor(routePath = "", domain = "", data = {}, responder = null) {
+    this.routePath = routePath;
+    this.domain = domain;
+    this.data = data;
+    this.responder = responder;
+  }
+}
+
+const typeToPath = {
+  connect: "/authorization"
+};
+
+class Background {
+  constructor() {
+    this.addListener();
+  }
+
+  addListener() {
+    // 监听content发来的消息，处理后再返回给content
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.type === "injectState") {
+        this.injectState(request.type, request.url, sendResponse);
+      } else if (request.type === "connect") {
+        this.connect(request.type, request.url, request.icon, sendResponse);
+      }
     });
-    const allWindows = await ExtensionPlatform.getAllWindows();
-    const existWindow = allWindows.find(win => {
-      return win.type === "popup" && win.id === popUpId;
+  }
+
+  async injectState(type, domain, sendResponse) {
+    const defaultAccount = await this.getDefaultAccount();
+    const defaultNetwork = await this.getStorage("network", []);
+    const naboxBridge = await this.getStorage("naboxBridge", {});
+    let selectedAccount = null
+    if (naboxBridge.allowSites && naboxBridge.allowSites.length) {
+      const authorized = naboxBridge.allowSites.filter(site => {
+        site.origin === domain;
+      })[0]
+      if (authorized) {
+        selectedAccount = defaultAccount;
+      }
+    }
+    sendResponse({
+      type,
+      status: true,
+      payload: {
+        selectedAccount,
+        network: defaultNetwork
+      }
     });
-    if (existWindow) {
-      ExtensionPlatform.focusWindow(existWindow.id);
-    } else {
-      const lastFocusWindow = await ExtensionPlatform.getLastFocusedWindow();
-      const url = chrome.runtime.getURL("home.html");
-      const newWindow = await ExtensionPlatform.openWindow({
-        url: url + "#/authorization",
-        type: "popup",
-        width: WIDTH,
-        height: HEIGHT,
-        left: lastFocusWindow.left + (lastFocusWindow.width - WIDTH),
-        top: lastFocusWindow.top
+  }
+
+  async connect(type, domain, icon, sendResponse) {
+    const defaultAccount = await this.getDefaultAccount();
+    const naboxBridge = (await ExtensionPlatform.get("naboxBridge")).naboxBridge || {};
+    const allowSites = naboxBridge.allowSites || [];
+    const Authorized = allowSites.filter(site => {
+      return site.origin === domain;
+    })[0];
+    if (Authorized) {
+      //已经授权过直接返回之前数据
+      sendResponse({
+        type,
+        payload: defaultAccount,
+        status: true
       });
-      popUpId = newWindow.id;
-      console.log(newWindow, 888)
+    } else {
+      NotificationService.open(
+        new Prompt(typeToPath[type], domain, { icon }, async approved => {
+          const defaultAccount = await this.getDefaultAccount();
+          if (approved) {
+            sendResponse({
+              type,
+              status: true,
+              payload: defaultAccount
+            });
+            allowSites.push(domain);
+            naboxBridge.allowSites = allowSites;
+            ExtensionPlatform.set({ naboxBridge });
+          } else {
+            sendResponse({
+              type,
+              status: false
+            });
+          }
+        })
+      );
     }
   }
-  /*browser.tabs.executeScript({
-    file: "content-script.js"
-  });*/
-});
 
+  async getStorage(key, defaultValue) {
+    return (await ExtensionPlatform.get(key))[key] || defaultValue;
+  }
 
-//向content-script发送消息，并监听content的响应
+  async getDefaultAccount() {
+    const accountList = await this.getStorage("accountList", []);
+    const currentAccount = accountList.filter(account => account.selection)[0];
+    const defaultAccount = currentAccount
+      ? {
+          beta: currentAccount.beta,
+          main: currentAccount.main
+        }
+      : null;
+    return defaultAccount;
+  }
+}
+
+new Background();
+
+//向content-script发送消息，监听content的响应
 /* chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
   console.log(tabs, "===tabs===")
   if (tabs.length) {
@@ -55,23 +128,9 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 //与content长连接
 chrome.runtime.onConnect.addListener(function(port) {
-  if (port.name === "nabox_wallet_channel") {
-    port.onMessage.addListener(function(msg) {
-      if (msg.type === "connect") {
-        port.postMessage({type: 1, status: true, data: "connect success"});
-      } else if (msg.type === "getBalance") {
-        port.postMessage({type: 2, status: true, data: "getBalance success"});
-      }
+  if (port.name === "new_popup_page") {
+    port.onDisconnect.addListener(function(e) {
+      console.log(e, 6666);
     });
-  } /* else if (port.name === "auth") {
-    port.onMessage.addListener(function(msg) {
-      console.log(msg, "===mgs===");
-      if (msg.joke == "Knock knock")
-        port.postMessage({question: "Who's there?"});
-      else if (msg.answer == "Madame")
-        port.postMessage({question: "Madame who?"});
-      else if (msg.answer == "Madame... Bovary")
-        port.postMessage({question: "I don't get it."});
-    });
-  } */
+  }
 });

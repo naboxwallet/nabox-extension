@@ -129,10 +129,10 @@ const cn = {
     // assetInfo1:: "" 
   },
   authorization: {
-    authorization1: "请勾选需要连接的账户",
+    authorization1: "请求获取钱包地址",
     authorization2: "该网站将获得以下权限",
     authorization3: "读取账户信息",
-    authorization4: "连接",
+    authorization4: "确认授权",
   },
   statusType: {
     1: "已确认",

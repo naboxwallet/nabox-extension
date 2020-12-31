@@ -28,12 +28,12 @@ module.exports = {
       entry: "./src/standalone/main.js",
       title: "Standalone",
       filename: "index.html"
-    },*/
+    },
     devtools: {
       template: "public/browser-extension.html",
       entry: "./src/devtools/main.js",
       title: "Devtools"
-    },
+    },*/
     //浏览器
     home: {
       template: "public/browser.html",

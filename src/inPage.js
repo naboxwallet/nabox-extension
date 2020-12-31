@@ -1,92 +1,97 @@
-console.log("我是inPage, web页面与插件通信的桥梁");
+console.log("我是inPage, web页面与插件通信的桥梁...................");
 const EventEmitter = require("eventemitter3");
-window.aa = 123;
+
+const resolvers = [];
+
+const addListenerFromContent = () => {
+  window.addEventListener("message", event => {
+    if (event.origin === location.origin) {
+      for (let i = 0; i < resolvers.length; i++) {
+        if (resolvers[i].type === event.data.type) {
+          if (!event.data.status) {
+            resolvers[i].reject("User rejected the request");
+          } else {
+            resolvers[i].resolve(event.data.payload);
+          }
+          resolvers.splice(i, 1);
+        }
+      }
+    }
+  });
+};
+
+const send = (method, data = {}) => {
+  return new Promise((resolve, reject) => {
+    resolvers.push({
+      type: method,
+      resolve,
+      reject
+    });
+    window.postMessage({ method, data }, location.origin);
+  });
+};
+
+const injectExtensionState = () => {
+  return send("injectState");
+};
+
 class NaboxBridge extends EventEmitter {
   constructor() {
     super();
-    this.injectExtensionState();
-  }
-  network = "";
-  currentAccount = "";
-  injectStateHandle = () => {};
-  connectHandle = () => {};
-  getBalanceHandle = () => {};
-
-  injectExtensionState() {
-    this.sendData("injectState", {}, response => {
-      this.removeMsgListener(this.injectStateHandle);
-      console.log(response, 89)
-      if (response.type === "injectState") {
-        this.network = response.network;
-        this.currentAccount = response.currentAccount;
-      }
+    addListenerFromContent();
+    this.network = "";
+    this.selectedAccount = null;
+    injectExtensionState().then(res => {
+      this.network = res.network;
+      this.selectedAccount = res.selectedAccount;
     });
-    /* const handle = event => {
-      if (event.origin === location.origin) {
-        console.log(event.data, "====inPage====");
-        if (event.data.type === "injectState") {
-          this.network = event.data.network;
-          this.currentAccount = event.data.currentAccount;
-          this.removeMsgListener(this.handle);
-        }
-      }
-    };
-    this.addMsgListener(handle); */
   }
 
-  connected() {
-    return true;
-  }
+  /**
+   * 授权连接插件
+   * @return {object} {beta: xx,main:xx}
+   */
   connect() {
-    return new Promise((resolve, reject) => {
-      this.sendData("connect", {}, response => {
-        this.removeMsgListener(this.connectHandle);
-        if (response.type === "connect") {
-          console.log(response, "===connect");
-          resolve(response.address);
-        } else {
-          console.log(response, "===connect---reject");
-          reject(response);
-        }
-      });
+    return send("connect").then(selectedAccount => {
+      console.log(selectedAccount, "==selectedAccount==");
+      this.selectedAccount = selectedAccount;
+      return selectedAccount;
     });
   }
 
-  getBalance(data) {
-    return new Promise((resolve, reject) => {
-      this.sendData("getBalance", { ...data }, response => {
-        this.removeMsgListener(this.getBalanceHandle);
-        if (response.type === "getBalance") {
-          console.log(response, "===getBalance");
-          resolve(response.address);
-        } else {
-          console.log(response, "===getBalance---reject");
-          reject(response);
-        }
-      });
-    });
-  }
+  /**
+   * @desc 获取资产
+   * @param {object} data
+   * @param {string} data.chain
+   * @param {string} data.network
+   * @param {string|number} data.chainId
+   * @param {string|number} data.assetId
+   * @return {object}
+   */
+  getBalance(data) {}
+}
 
-  sendData(method, data, callback) {
-    window.postMessage({ method, data }, location.origin);
-    const handleName = method + "Handle";
-    console.log(handleName, "8899")
-    this[handleName] = function(event) {
+class Inject {
+  constructor() {
+    window.naboxBridge = new NaboxBridge();
+    window.addEventListener("message", event => {
       if (event.origin === location.origin) {
-        // console.log(event, "====inPage====");
-        callback(event.data);
+        const { type, payload } = event.data;
+        if (!type) return;
+        if (type === "changeAllowSites") {
+          window.naboxBridge.selectedAccount = payload;
+          window.naboxBridge.emit("accountsChanged", payload);
+        } else if (type === "accountsChanged") {
+          window.naboxBridge.selectedAccount = payload;
+          window.naboxBridge.emit("accountsChanged", payload);
+        } else if (type === "networkChanged") {
+          window.naboxBridge.network = payload;
+          window.naboxBridge.emit("networkChanged", payload);
+        } else {
+          // console.log(1)
+        }
       }
-    };
-    this.addMsgListener(this[handleName]);
-  }
-
-  addMsgListener(fn) {
-    window.addEventListener("message", fn);
-  }
-
-  removeMsgListener(fn) {
-    window.removeEventListener("message", fn);
+    });
   }
 }
-window.naboxBridge = new NaboxBridge();
-// console.log(window.naboxBridge, 999888777)
+new Inject();
