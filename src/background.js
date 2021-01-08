@@ -1,5 +1,6 @@
 import ExtensionPlatform from "@/utils/extension";
 import NotificationService from "@/utils/NotificationService";
+import { getStorage, getSelectedAccount } from "@/utils/util";
 
 class Prompt {
   constructor(routePath = "", domain = "", data = {}, responder = null) {
@@ -11,7 +12,7 @@ class Prompt {
 }
 
 const typeToPath = {
-  connect: "/authorization"
+  createSession: "/notification/authorization"
 };
 
 class Background {
@@ -22,23 +23,24 @@ class Background {
   addListener() {
     // 监听content发来的消息，处理后再返回给content
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.type === "injectState") {
-        this.injectState(request.type, request.url, sendResponse);
-      } else if (request.type === "connect") {
-        this.connect(request.type, request.url, request.icon, sendResponse);
+      const { type, url, icon } = request;
+      if (type === "injectState") {
+        // this.injectState(type, url, sendResponse);
+      } else if (type === "createSession") {
+        this.createSession(type, url, icon, sendResponse);
       }
     });
   }
 
   async injectState(type, domain, sendResponse) {
-    const defaultAccount = await this.getDefaultAccount();
-    const defaultNetwork = await this.getStorage("network", []);
-    const naboxBridge = await this.getStorage("naboxBridge", {});
-    let selectedAccount = null
+    const defaultAccount = await getSelectedAccount();
+    const defaultNetwork = await getStorage("network", "");
+    const naboxBridge = await getStorage("naboxBridge", {});
+    let selectedAccount = null;
     if (naboxBridge.allowSites && naboxBridge.allowSites.length) {
-      const authorized = naboxBridge.allowSites.filter(site => {
-        site.origin === domain;
-      })[0]
+      const authorized = naboxBridge.allowSites.filter(
+        site => site.origin === domain
+      )[0];
       if (authorized) {
         selectedAccount = defaultAccount;
       }
@@ -53,29 +55,45 @@ class Background {
     });
   }
 
-  async connect(type, domain, icon, sendResponse) {
-    const defaultAccount = await this.getDefaultAccount();
-    const naboxBridge = (await ExtensionPlatform.get("naboxBridge")).naboxBridge || {};
+  async createSession(type, domain, icon, sendResponse) {
+    const defaultAccount = await getSelectedAccount();
+    const defaultNetwork = await getStorage("network", "");
+    if (!defaultAccount) {
+      sendResponse({
+        type,
+        payload: null,
+        status: true
+      });
+      return;
+    }
+    const naboxBridge = await getStorage("naboxBridge", {}); //(await ExtensionPlatform.get("naboxBridge")).naboxBridge || {};
     const allowSites = naboxBridge.allowSites || [];
     const Authorized = allowSites.filter(site => {
-      return site.origin === domain;
+      return site === domain;
     })[0];
     if (Authorized) {
       //已经授权过直接返回之前数据
       sendResponse({
         type,
-        payload: defaultAccount,
+        payload: {
+          accounts: defaultAccount,
+          chainId: defaultNetwork
+        },
         status: true
       });
     } else {
       NotificationService.open(
         new Prompt(typeToPath[type], domain, { icon }, async approved => {
-          const defaultAccount = await this.getDefaultAccount();
           if (approved) {
+            const defaultAccount = await getSelectedAccount();
+            const defaultNetwork = await getStorage("network", "");
             sendResponse({
               type,
               status: true,
-              payload: defaultAccount
+              payload: {
+                accounts: defaultAccount,
+                chainId: defaultNetwork
+              }
             });
             allowSites.push(domain);
             naboxBridge.allowSites = allowSites;
@@ -90,28 +108,22 @@ class Background {
       );
     }
   }
-
-  async getStorage(key, defaultValue) {
-    return (await ExtensionPlatform.get(key))[key] || defaultValue;
-  }
-
-  async getDefaultAccount() {
-    const accountList = await this.getStorage("accountList", []);
-    const currentAccount = accountList.filter(account => account.selection)[0];
-    const defaultAccount = currentAccount
-      ? {
-          beta: currentAccount.beta,
-          main: currentAccount.main
-        }
-      : null;
-    return defaultAccount;
-  }
 }
 
 new Background();
 
+/*
+//与content长连接
+chrome.runtime.onConnect.addListener(function(port) {
+  if (port.name === "new_popup_page") {
+    port.onDisconnect.addListener(function(e) {
+      console.log(e, 6666);
+    });
+  }
+});
+
 //向content-script发送消息，监听content的响应
-/* chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
   console.log(tabs, "===tabs===")
   if (tabs.length) {
     chrome.tabs.sendMessage(
@@ -124,13 +136,5 @@ new Background();
       }
     );
   }
-}); */
-
-//与content长连接
-chrome.runtime.onConnect.addListener(function(port) {
-  if (port.name === "new_popup_page") {
-    port.onDisconnect.addListener(function(e) {
-      console.log(e, 6666);
-    });
-  }
 });
+*/

@@ -7,11 +7,11 @@ import i18n from "../plugins/element";
 // import "../plugins/element";
 import ExtensionPlatform from "@/utils/extension";
 import { request } from "@/utils/request";
+import { getStorage } from "@/utils/util";
 
 router.beforeEach(async (to, from, next) => {
-  const password = (await ExtensionPlatform.get("password")).password;
-  const accountList =
-    (await ExtensionPlatform.get("accountList")).accountList || [];
+  const accountList = await getStorage("accountList", []);
+  const password = await getStorage("password", "");
   if (!password && to.path !== "/login") {
     next("/login");
   } else if (password && !accountList.length && to.path !== "/new-address") {
@@ -49,7 +49,8 @@ async function getConfig() {
           prefix: v.prefix,
           symbol: mainInfo ? mainInfo.symbol : "",
           decimal: mainInfo ? mainInfo.decimals : "",
-          assets: v.assets
+          assets: v.assets,
+          config: v.configs
         }
       });
     }

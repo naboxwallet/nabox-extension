@@ -1,8 +1,9 @@
 <template>
   <div class="home">
-    <Header :network="network" @changeNetwork="changeNetwork" />
+    <Header :network="$store.state.network" @changeNetwork="changeNetwork" />
     <Overview
-      @show-modal="overviewModal = true"
+      @show-app-modal="showAppModal"
+      @show-asset-modal="overviewModal = true"
       :accountName="chainAccount.name"
       :balance="chainAccount['balance_' + $store.state.network]"
     />
@@ -21,6 +22,32 @@
       @toAddAsset="toAddAsset"
       @loadMoreTx="getTxList"
     />
+    <!-- 已连接应用弹窗 -->
+    <Modal
+      :visiable.sync="appModal"
+      :title="$t('home.home13')"
+      class="app-modal"
+    >
+      <div class="sites-wrap">
+        <div class="site-item" v-for="site in allowSites" :key="site">
+          <div class="left">
+            <span class="circle"></span>
+            <p class="site-name">{{ site }}</p>
+          </div>
+          <span class="operate" @click="updateSites(site)">
+            {{ $t("home.home14") }}
+          </span>
+        </div>
+        <div
+          v-if="showManualConnect"
+          class="connect-current"
+          @click="toAuthorization"
+        >
+          {{ $t("home.home15") }}
+        </div>
+      </div>
+    </Modal>
+    <!-- 资产总览弹窗 -->
     <Modal
       :visiable.sync="overviewModal"
       class="overview-modal"
@@ -39,6 +66,7 @@
         </div>
       </div>
     </Modal>
+    <!-- 二维码弹窗 -->
     <Modal
       :visiable.sync="qrcodeModal"
       class="qr-code-modal"
@@ -56,14 +84,20 @@ import Overview from "@/views/home/Overview";
 import Assets from "@/views/home/Assets";
 import Modal from "@/components/Modal";
 import QRCode from "qrcodejs2";
-import { divisionDecimals, formatTime } from "@/utils/util";
+import { divisionDecimals, formatTime, getStorage, Plus } from "@/utils/util";
+import ExtensionPlatform from "@/utils/extension";
 export default {
   data() {
     this.pageNumber = 1;
     this.pageSize = 10;
     return {
-      network: "",
+      // network: "",
       currentAccount: [],
+      address: "",
+      appModal: false,
+      allowSites: [], //已连接应用
+      currentTab: {}, //当前网站tab信息
+      showManualConnect: false,
       overviewModal: false,
       qrcodeModal: false,
       chain: sessionStorage.getItem("chain") || "NULS",
@@ -100,9 +134,8 @@ export default {
     "$store.state.network": {
       immediate: true,
       handler(val) {
-        console.log(val, "network====")
         if (!val) return;
-        this.network = val;
+        // this.network = val;
         this.changeAccount();
       }
     },
@@ -115,7 +148,7 @@ export default {
   },
   computed: {
     chainAccount() {
-      return this.$store.getters.currentAccount
+      return this.$store.getters.currentAccount;
     },
     accountName() {
       const account = this.$store.getters.currentAccount;
@@ -129,12 +162,47 @@ export default {
     Modal
   },
   mounted() {
-    window.bb = 123
-    this.$store.dispatch("setAccount", [...this.$store.state.accountList]);
+    // this.$store.dispatch("setAccount", [...this.$store.state.accountList]);
   },
   methods: {
-    changeNetwork(network) {
-      this.$store.dispatch("setNetwork", network);
+    async changeNetwork(network) {
+      const accounts = this.$store.getters.currentAccount;
+      const currentAccount = accounts[network];
+      this.currentAccount = currentAccount;
+      await this.$store.dispatch("setNetwork", network);
+      this.update(this.chain);
+    },
+    async showAppModal() {
+      this.appModal = true;
+      const naboxBridge = await getStorage("naboxBridge", {});
+      this.allowSites = naboxBridge.allowSites || [];
+      chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        console.log(tabs, 12345)
+        if (tabs.length && tabs[0].url) {
+          const url = tabs[0].url;
+          const origin = url.split("://")[0] + "://" + url.split("://")[1].split("/")[0];
+          this.currentTab = {
+            domain: origin,
+            icon: tabs[0].favIconUrl
+          };
+          this.showManualConnect = this.allowSites.indexOf(origin) === -1;
+        }
+      });
+    },
+    toAuthorization() {
+      this.$router.push({
+        path: "/authorization",
+        query: this.currentTab
+      })
+    },
+    // 断开已连接网站
+    async updateSites(site) {
+      const naboxBridge = await getStorage("naboxBridge", {});
+      const index = this.allowSites.indexOf(site);
+      this.allowSites.splice(index, 1);
+      naboxBridge.allowSites = this.allowSites;
+      ExtensionPlatform.set({ naboxBridge });
+      this.appModal = false;
     },
     showQrcode() {
       this.qrcodeModal = true;
@@ -155,14 +223,11 @@ export default {
       });
     },
     // 切换账户
-    changeAccount() {
+    async changeAccount() {
       const network = this.$store.state.network;
       const accounts = this.$store.getters.currentAccount;
-      // console.log(this.$store.state.network, "this.$store.state.network")
-      // console.log(this.$store.getters.currentAccount, "this.$store.getters.currentAccount")
       const currentAccount = accounts[network];
       this.currentAccount = currentAccount;
-      // console.log(this.currentAccount, 55)
       this.update(this.chain);
     },
     // 切换链网络
@@ -186,7 +251,7 @@ export default {
       if (res.code === 1000) {
         let total = 0;
         res.data.map(v => {
-          total += Number(v.usdPrice);
+          total = Plus(total, v.usdPrice).toFixed();
           v.total = divisionDecimals(v.total, v.decimals);
         });
         this.accountInfo = {
@@ -283,6 +348,51 @@ export default {
 .home {
   overflow: hidden;
   height: 100%;
+  .app-modal {
+    .inner-content {
+      min-height: 100px;
+    }
+    .sites-wrap {
+      .site-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 44px;
+        border-bottom: 1px solid #e9ebf3;
+        .left {
+          display: flex;
+          align-items: center;
+        }
+      }
+      .circle {
+        display: inline-block;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #53b8a9;
+        margin-right: 5px;
+      }
+      .site-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 180px;
+      }
+      .operate {
+        font-size: 12px;
+        color: #53b8a9;
+        cursor: pointer;
+      }
+      .connect-current {
+        font-size: 12px;
+        height: 44px;
+        line-height: 44px;
+        color: #53b8a9;
+        text-align: center;
+        cursor: pointer;
+      }
+    }
+  }
   .overview-modal {
     .inner-content {
       .content-head,

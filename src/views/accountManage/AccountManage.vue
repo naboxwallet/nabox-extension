@@ -36,7 +36,11 @@
         </div>
         <i class="el-icon-arrow-right"></i>
       </div>
-      <div class="content-item" @click="showRemoveAccount = true">
+      <div
+        v-if="accountList.length > 1"
+        class="content-item"
+        @click="showRemoveAccount = true"
+      >
         <div class="remove-account">
           <img src="../../assets/img/del.svg" alt="" />
           <span>{{ $t("accountManage.accountManage5") }}</span>

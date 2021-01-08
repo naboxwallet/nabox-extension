@@ -15,7 +15,7 @@
         </div>
         <div class="transfer-item">
           <label>{{ $t("public.amount") }}</label>
-          <P>{{ data.amount }}</P>
+          <P>{{ data.amount + data.assetSymbol }}</P>
         </div>
         <div class="transfer-item">
           <label>{{ $t("public.fee") }}</label>

@@ -1,13 +1,15 @@
-/* eslint-disable vue/valid-v-bind */
 <template>
   <div class="authorization">
     <div class="from-wrap">
       <div class="from-logo">
-        <img v-if="siteInfo.icon" :src="notification.icon" />
+        <img
+          v-if="notification.data && notification.data.icon"
+          :src="notification.data.icon"
+        />
         <i v-else>C</i>
       </div>
       <p class="from-origin">
-        {{ siteInfo.domain }}
+        {{ notification.domain }}
       </p>
     </div>
     <div class="select-account">
@@ -23,12 +25,12 @@
 </template>
 
 <script>
-import { getStorage } from "@/utils/util";
-import ExtensionPlatform from "@/utils/extension";
+import NotificationService from "@/utils/NotificationService";
 export default {
   data() {
     return {
-      siteInfo: this.$route.query
+      notification: {},
+      accountList: []
     };
   },
 
@@ -41,21 +43,19 @@ export default {
   created() {},
 
   async mounted() {
+    this.notification = chrome.extension.getBackgroundPage().notification;
   },
 
   methods: {
     close() {
-      this.$router.go(-1);
+      NotificationService.close();
     },
     reject() {
+      this.notification.responder(false);
       this.close();
     },
     async connect() {
-      const naboxBridge = await getStorage("naboxBridge", {});
-      const allowSites = naboxBridge.allowSites;
-      allowSites.push(this.siteInfo.domain);
-      naboxBridge.allowSites = allowSites;
-      await ExtensionPlatform.set({ naboxBridge });
+      this.notification.responder(true);
       this.close();
     }
   }

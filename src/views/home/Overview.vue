@@ -5,7 +5,7 @@
         <label>{{ accountName }}</label>
         <span>${{ balance }}</span>
       </div>
-      <div class="right clicks">
+      <div class="right clicks" @click="$emit('show-app-modal')">
         <img src="../../assets/img/application.svg" alt="" />
         <span>{{ $t("home.home1") }}</span>
       </div>
@@ -16,11 +16,11 @@
           <img src="../../assets/img/transfer.svg" alt="" />
           <p>{{ $t("home.home2") }}</p>
         </li>
-        <li @click="toUrl('/cross-txlist')">
+        <!-- <li @click="toUrl('/cross-txlist')">
           <img src="../../assets/img/tx-record.svg" alt="" />
           <p>{{ $t("home.home3") }}</p>
-        </li>
-        <li @click="$emit('show-modal')">
+        </li> -->
+        <li @click="$emit('show-asset-modal')">
           <img src="../../assets/img/overview.svg" alt="" />
           <p>{{ $t("home.home4") }}</p>
         </li>

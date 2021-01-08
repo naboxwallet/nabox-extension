@@ -1,4 +1,3 @@
-console.log("我是inPage, web页面与插件通信的桥梁...................");
 const EventEmitter = require("eventemitter3");
 
 const resolvers = [];
@@ -39,23 +38,25 @@ class NaboxBridge extends EventEmitter {
   constructor() {
     super();
     addListenerFromContent();
-    this.network = "";
-    this.selectedAccount = null;
+    this.chainId = "";
+    this.accounts = null;
+    this.connected = false;
     injectExtensionState().then(res => {
-      this.network = res.network;
-      this.selectedAccount = res.selectedAccount;
+      this.chainId = res.chainId;
+      this.accounts = res.accounts;
+      this.connected = res.accounts ? true : false;
     });
   }
 
   /**
    * 授权连接插件
-   * @return {object} {beta: xx,main:xx}
+   * @return {object}  返回当前选中账户{beta: xx,main:xx}
    */
-  connect() {
-    return send("connect").then(selectedAccount => {
-      console.log(selectedAccount, "==selectedAccount==");
-      this.selectedAccount = selectedAccount;
-      return selectedAccount;
+  createSession() {
+    return send("createSession").then(accounts => {
+      console.log(accounts, "==accounts==");
+      this.accounts = accounts;
+      return accounts;
     });
   }
 
@@ -74,24 +75,59 @@ class NaboxBridge extends EventEmitter {
 class Inject {
   constructor() {
     window.naboxBridge = new NaboxBridge();
+    //监听授权网址、网络、选中账户变化
     window.addEventListener("message", event => {
       if (event.origin === location.origin) {
         const { type, payload } = event.data;
         if (!type) return;
-        if (type === "changeAllowSites") {
-          window.naboxBridge.selectedAccount = payload;
-          window.naboxBridge.emit("accountsChanged", payload);
-        } else if (type === "accountsChanged") {
-          window.naboxBridge.selectedAccount = payload;
-          window.naboxBridge.emit("accountsChanged", payload);
-        } else if (type === "networkChanged") {
-          window.naboxBridge.network = payload;
-          window.naboxBridge.emit("networkChanged", payload);
-        } else {
-          // console.log(1)
-        }
+        // 支持绑定的事件
+        const types = [
+          "changeAllowSites",
+          "accountsChanged",
+          "networkChanged",
+          "connect",
+          "session_update",
+          "disconnect"
+        ];
+        if (types.indexOf(type) > -1) this.emitEvent(type, payload);
       }
     });
+    /* window.naboxBridge.on("accountsChanged", (res)=>{console.log(res, "----account----")})
+    window.naboxBridge.on("networkChanged", (res)=>{console.log(res, "----network----")}) */
+
+    window.naboxBridge.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
+    window.naboxBridge.on("session_update", (error, res)=>{console.log(error, res, "----session_update----")})
+    window.naboxBridge.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")})
+  }
+  emitEvent(type, data) {
+    console.log(type, 6666)
+    // let property;
+    switch (type) {
+      case "connect":
+      case "session_update":
+        window.naboxBridge.accounts = data.accounts;
+        window.naboxBridge.chainId = data.chainId;
+        break;
+      case "disconnect":
+        window.naboxBridge.connected = false;
+        window.naboxBridge.accounts = null;
+      /* case "changeAllowSites":
+      case "accountsChanged":
+        property = "selectedAccount";
+        break;
+      case "networkChanged":
+        property = "network";
+        break;
+      case "disconnect":
+        window.naboxBridge.connected = false;
+        window.naboxBridge.selectedAccount = null;
+        window.naboxBridge.emit("disconnect", false);
+        return; */
+    }
+    /* console.log(444);
+    window.naboxBridge[property] = data;
+    window.naboxBridge.emit(type, data); */
+    window.naboxBridge.emit(type, "", { params: [data] });
   }
 }
 new Inject();

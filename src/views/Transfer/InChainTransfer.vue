@@ -103,8 +103,7 @@ import { superLong, timesDecimals, Plus, Division, Times, divisionDecimals } fro
 import nerve from "nerve-sdk-js";
 import sdk from "nerve-sdk-js/lib/api/sdk";
 import utils from "nuls-sdk-js/lib/utils/utils";
-import { validateAddress } from "@/utils/api_ethers";
-import { NTransfer, ETransfer } from "@/utils/api";
+import { NTransfer, ETransfer, validateAddress } from "@/utils/api";
 export default {
   data() {
     const validateTo = (rule, value, callback) => {
@@ -212,7 +211,8 @@ export default {
       return {
         from: superLong(this.transferModal.from, 12),
         to: superLong(this.transferModal.to, 12),
-        amount: this.transferModal.amount + " " + this.chooseAsset.symbol,
+        amount: this.transferModal.amount,
+        assetSymbol: this.chooseAsset.symbol,
         fee: this.fee + " " + this.feeSymbol,
         remarks: this.transferModal.remarks
       };
@@ -513,13 +513,12 @@ export default {
       });
     },
     async submit() {
-      const network = this.$store.state.network;
       let txHex = "";
       this.loading = true;
       if (this.chain === "NULS" || this.chain === "NERVE") {
         const transfer = new NTransfer({
           chain: this.chain,
-          network,
+          network: this.$store.state.network,
           type: this.type
         });
         const transferInfo = {

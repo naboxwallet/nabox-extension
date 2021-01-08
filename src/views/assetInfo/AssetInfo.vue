@@ -122,7 +122,9 @@ export default {
         }
       });
       if (res.code === 1000) {
+        console.log(res.data,6)
         res.data.records.map(v => {
+          console.log(v, 23)
           v.createTime = formatTime(v.createTime * 1000);
           v.amount = divisionDecimals(v.amount, v.decimals);
         });

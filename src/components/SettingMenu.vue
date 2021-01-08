@@ -17,8 +17,8 @@
             class="account setting-item common-pd"
             :class="{ active: item.selection }"
             v-for="item in accountList"
-            :key="item.id"
-            @click="switchAccount(item.id)"
+            :key="item.pub"
+            @click="switchAccount(item.pub)"
           >
             <p class="border">
               <span class="circle"></span>
@@ -49,6 +49,7 @@
 <script>
 import axios from "axios";
 import ExtensionPlatform from "@/utils/extension";
+import { getStorage } from "@/utils/util";
 
 export default {
   name: "",
@@ -85,11 +86,11 @@ export default {
         }
       });
     },
-    switchAccount(id) {
+    async switchAccount(pub) {
       const accountList = [...this.accountList];
       accountList.map(item => {
         item.selection = false;
-        if (item.id === id) {
+        if (item.pub === pub) {
           item.selection = true;
         }
       });

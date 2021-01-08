@@ -90,33 +90,32 @@ export default {
       } else {
         const accountList = [...this.accountList];
         const exit = await this.checkNewAccount(aesPri);
+        const syncRes = await this.syncAccount(pub, beta);
+        if (!syncRes) {
+          this.$message({
+            type: "error",
+            message: "网络异常，请稍后再试"
+          });
+          this.loading = false;
+          return;
+        }
         if (!exit) {
           const id = genID();
           accountList.map(account => {
             account.selection = false;
           });
-          const syncRes = await this.syncAccount(pub, beta);
-          if (syncRes) {
-            const account = {
-              id: id,
-              name: this.accoutName,
-              selection: true,
-              balance_beta: 0,
-              balance_main: 0,
-              aesPri,
-              pub,
-              beta,
-              main
-            };
-            accountList.push(account);
-          } else {
-            this.$message({
-              type: "error",
-              message: "网络异常，请稍后再试"
-            });
-            this.loading = false;
-            return;
-          }
+          const account = {
+            id: id,
+            name: this.accoutName,
+            selection: true,
+            balance_beta: 0,
+            balance_main: 0,
+            aesPri,
+            pub,
+            beta,
+            main
+          };
+          accountList.push(account);
         } else {
           accountList.map(account => {
             account.selection = false;

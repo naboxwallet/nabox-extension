@@ -2,7 +2,7 @@ import axios from "axios";
 import { config } from "@/config.js";
 import ExtensionPlatform from "@/utils/extension";
 
-axios.defaults.timeout = 8000;
+axios.defaults.timeout = 15000;
 
 axios.defaults.headers.post["Content-Type"] = "application/json";
 

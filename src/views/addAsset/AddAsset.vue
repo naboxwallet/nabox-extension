@@ -101,13 +101,13 @@ export default {
         this.assetsList = res.data;
       }
     },
-    focusAsset(item) {
-      console.log(item, 44)
+    async focusAsset(item) {
+      // console.log(item, 44)
       const { chain, address } = this.$route.query;
       const assetInfo = item.contractAddress
         ? { contractAddress: item.contractAddress }
         : { chainId: item.chainId, assetId: item.assetId };
-      this.$request({
+      const res = await this.$request({
         url: "/wallet/address/asset/focus",
         data: {
           chain,
@@ -116,6 +116,12 @@ export default {
           ...assetInfo
         }
       });
+      if (res.code !== 1000) {
+        this.$message({
+          type: "error",
+          message: res.data
+        });
+      }
     },
     submit() {
       this.$router.back();

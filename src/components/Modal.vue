@@ -53,7 +53,8 @@ export default {
   bottom: 0;
   top: 0;
   margin: auto;
-  z-index: 999;
+  z-index: 9999;
+  overflow: hidden;
   .mask {
     position: absolute;
     width: 100%;

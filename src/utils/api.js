@@ -2,14 +2,15 @@ import nuls from "nuls-sdk-js";
 import nerve from "nerve-sdk-js";
 import { ethers } from "ethers";
 import sdk from "nerve-sdk-js/lib/api/sdk";
-import { Plus, htmlEncode, getPri, timesDecimals, decryptPassword } from "./util";
+import {
+  Plus,
+  htmlEncode,
+  getPri,
+  timesDecimals,
+  decryptPassword
+} from "./util";
 import ExtensionPlatform from "./extension";
 import { request } from "./request";
-
-const nSdk = {
-  NERVE: nerve,
-  NULS: nuls
-};
 
 export function createAccount(password, pri) {
   if (pri) {
@@ -84,18 +85,36 @@ function getAddress(type = "password", pri, pub, network = "beta") {
   };
 }
 
+export function validateAddress(account) {
+  try {
+    ethers.utils.getAddress(account);
+    return true;
+  } catch (error) {
+    console.error("地址校验失败: " + error);
+  }
+  return false;
+}
+
 // NULS NERVE跨链手续费
-export const crossFee = 0.3;
+export const crossFee = 0.01;
+const nSdk = {
+  NERVE: nerve,
+  NULS: nuls
+};
 
 export class NTransfer {
   constructor(props) {
-    this.chain = props.chain; //链网络
     if (!props.chain) {
       throw "未获取到交易网络，组装交易失败";
     }
-    this.sdk = nSdk[props.chain] || nerve; // nerve nuls sdk
-    this.network = props.network || "main"; //网络 beta or main
+    const validNetwork = ["beta", "main"];
+    if (validNetwork.indexOf(props.network) === -1) {
+      throw "invalid network";
+    }
+    this.chain = props.chain; //链网络
+    this.network = props.network; //网络 beta or main
     this.type = props.type; //交易类型
+    this.sdk = nSdk[this.chain] || nerve; // nerve nuls sdk
   }
   async getTxHex(data) {
     const encryptPassword = (await ExtensionPlatform.get("password")).password;
@@ -139,6 +158,9 @@ export class NTransfer {
         throw "nerve网络不支持合约操作";
       }
       return this.callContractTransaction(data);
+    } else if (this.type === 43) {
+      // nerve 网络提现到eth bsc
+      return this.WithdrawalTransaction(data);
     }
   }
   //nuls nerve普通转账input output
@@ -169,7 +191,7 @@ export class NTransfer {
         from: transferInfo.from,
         assetsChainId: mainAsset.chainId,
         assetsId: mainAsset.assetId
-      })
+      });
       inputs.push({
         address: transferInfo.from,
         assetsChainId: transferInfo.assetsChainId,
@@ -258,8 +280,74 @@ export class NTransfer {
     }
     return { inputs, outputs };
   }
+  // nerve 提现
+  async WithdrawalTransaction(transferInfo) {
+    console.log(transferInfo, 8888)
+    const config = JSON.parse(sessionStorage.getItem("config"));
+    const mainAsset = config[this.network][this.chain];
+    const nonce = await this.getNonce(transferInfo);
+    const mainAssetNonce = await this.getNonce({
+      from: transferInfo.from,
+      assetsChainId: mainAsset.chainId,
+      assetsId: mainAsset.assetId
+    });
+    let inputs = [];
+    const totalFee = Number(Plus(transferInfo.proposalPrice, transferInfo.fee));
+    if (
+      mainAsset.chainId === transferInfo.assetsChainId &&
+      mainAsset.assetId === transferInfo.assetsId
+    ) {
+      const newAmount = Number(Plus(transferInfo.amount, totalFee));
+      inputs.push({
+        address: transferInfo.from,
+        amount: newAmount,
+        assetsChainId: transferInfo.assetsChainId,
+        assetsId: transferInfo.assetsId,
+        nonce: nonce,
+        locked: 0
+      });
+    } else {
+      inputs = [
+        {
+          address: transferInfo.from,
+          amount: transferInfo.amount,
+          assetsChainId: transferInfo.assetsChainId,
+          assetsId: transferInfo.assetsId,
+          nonce: nonce,
+          locked: 0
+        },
+        {
+          address: transferInfo.from,
+          amount: totalFee,
+          assetsChainId: mainAsset.chainId,
+          assetsId: mainAsset.assetId,
+          nonce: mainAssetNonce,
+          locked: 0
+        }
+      ];
+    }
+    // 系统补贴手续费地址
+    const feeAddress = mainAsset.config.feeAddress;
+    const blockHoleAddress = mainAsset.config.destroyAddress;
+    let outputs = [
+      {
+        address: blockHoleAddress, //黑洞地址
+        amount: transferInfo.amount,
+        assetsChainId: transferInfo.assetsChainId,
+        assetsId: transferInfo.assetsId,
+        locked: 0
+      },
+      {
+        address: feeAddress, //提现费用地址
+        amount: transferInfo.proposalPrice,
+        assetsChainId: mainAsset.chainId,
+        assetsId: mainAsset.assetId,
+        locked: 0
+      }
+    ];
+    return { inputs, outputs };
+  }
   async getNonce(info) {
-    console.log(info, 999)
     try {
       const res = await request({
         url: "/wallet/address/asset",
@@ -270,7 +358,6 @@ export class NTransfer {
           assetId: info.assetsId
         }
       });
-      console.log(res, 88998899)
       if (res.code === 1000) {
         return res.data.nonce;
       }
@@ -285,15 +372,32 @@ const BNB_RPC_URL = {
   ropsten: "https://data-seed-prebsc-1-s1.binance.org:8545/",
   homestead: "https://bsc-dataseed.binance.org/"
 };
+
+const CROSS_OUT_ABI = [
+  "function crossOut(string to, uint256 amount, address ERC20) public payable returns (bool)"
+];
+const ERC20_ABI = [
+  "function allowance(address owner, address spender) external view returns (uint256)",
+  "function approve(address spender, uint256 amount) external returns (bool)"
+];
+
 export class ETransfer {
   constructor(props) {
-    if (!props.chain || !props.network) {
+    console.log(props, 44)
+    if (!props.chain) {
       throw "未获取到网络，组装交易失败";
     }
-    this.chain = props.chain;
-    this.network = props.network;
-    // this.gasLimit = this.isToken ? "100000" : "33594";
-    this.provider = this.getProvider(props.chain, props.network);
+    const validChains = ["Ethereum", "BSC"];
+    const validNetwork = ["beta", "main"];
+    if (validChains.indexOf(props.chain) === -1) {
+      throw "invalid chain";
+    }
+    if (validNetwork.indexOf(props.network) === -1) {
+      throw "invalid network";
+    }
+    this.chain = props.chain; //链网络
+    this.network = props.network; //网络 beta or main
+    this.provider = this.getProvider(this.chain, this.network);
   }
   getProvider(chain, network) {
     const ETHNET = network === "main" ? "homestead" : "ropsten";
@@ -421,6 +525,68 @@ export class ETransfer {
       return await wallet.sign(transaction);
     }
   }
+
+  /**
+   * 跨链转入交易签名
+   * to nerve地址
+   * value 转账金额
+   * upSpeed 是否加速
+   * multySignAddress 多签地址
+   * contractAddress token交易时合约地址
+   * tokenDecimals token decimals
+   */
+  async getCrossInTxHex(params) {
+    const wallet = await this.getWallet();
+    const nonce = await wallet.getTransactionCount();
+    const gasPrice = await this.provider.getGasPrice();
+    const gasLimit = params.contractAddress ? "100000" : "33594";
+    const transaction = {
+      to: params.multySignAddress,
+      nonce,
+      gasLimit: Number(gasLimit),
+      gasPrice
+    };
+    const iface = new ethers.utils.Interface(CROSS_OUT_ABI);
+    if (params.contractAddress) {
+      // token转账
+      const numberOfTokens = ethers.utils.parseUnits(
+        params.value,
+        params.tokenDecimals
+      );
+      const data = iface.functions.crossOut.encode([ params.to, numberOfTokens, params.contractAddress ]);
+      transaction.from = params.from;
+      transaction.value = "0x00";
+      transaction.data = data;
+      if (params.upSpeed) {
+        transaction.gasPrice = await this.getSpeedUpGasPrice();
+      }
+      const failed = await this.validate(transaction);
+      if (failed) {
+        console.error("failed: " + failed);
+        return null;
+      }
+      delete transaction.from; //etherjs 4.0 from参数无效 报错
+      return wallet.sign(transaction);
+    } else {
+      // 非token转账
+      const value = ethers.utils.parseEther(params.value);
+      const data = iface.functions.crossOut.encode([ params.to, value, "0x0000000000000000000000000000000000000000" ]);
+
+      transaction.value = value;
+      transaction.data = data;
+
+      if (params.upSpeed) {
+        transaction.gasPrice = await this.getSpeedUpGasPrice();
+      }
+      const failed = await this.validate(transaction);
+      if (failed) {
+        console.error("failed: " + failed);
+        return null;
+      }
+      console.log(transaction, 888)
+      return await wallet.sign(transaction);
+    }
+  }
   // 获取手续费
   getGasPrice(gasLimit) {
     return this.provider.getGasPrice().then(gasPrice => {
@@ -443,7 +609,81 @@ export class ETransfer {
       return gasPrice.add(GWEI_10);
     });
   }
-  calWithdrawalFee() {
-
+  //验证交易参数
+  async validate(tx) {
+    try {
+      const result = await this.provider.call(tx);
+      return ethers.utils.toUtf8String("0x" + result.substr(138));
+    } catch (e) {
+      return false;
+    }
+  }
+  /**
+   * 提现默认手续费--nvt
+   * @param nvtUSD    nvt的USDT价格
+   * @param heterogeneousChainUSD    异构链币种的USDT价格
+   * @param isToken   是否token资产
+   */
+  async calWithdrawalNVTFee(nvtUSD, heterogeneousChainUSD, isToken) {
+    const gasPrice = await this.getWithdrawGas();
+    let gasLimit;
+    if (isToken) {
+      gasLimit = new ethers.utils.BigNumber("210000");
+    } else {
+      gasLimit = new ethers.utils.BigNumber("190000");
+    }
+    const nvtUSDBig = ethers.utils.parseUnits(nvtUSD, 6);
+    const ethUSDBig = ethers.utils.parseUnits(heterogeneousChainUSD, 6);
+    const result = ethUSDBig.mul(gasPrice).mul(gasLimit).div(ethers.utils.parseUnits(nvtUSDBig.toString(), 10));
+    // console.log('result: ' + result.toString());
+    const numberStr = ethers.utils.formatUnits(result, 8).toString();
+    const ceil = Math.ceil(numberStr);
+    // console.log('ceil: ' + ceil);
+    const finalResult = ethers.utils.parseUnits(ceil.toString(), 8);
+    // console.log('finalResult: ' + finalResult);
+    return finalResult;
+  }
+  // 提现gas
+  getWithdrawGas() {
+    return this.provider.getGasPrice().then(gasPrice => {
+      return gasPrice;
+    });
+  }
+  /**
+   * 计算提现手续费  eth/bnb
+   */
+  async calWithdrawFee(isToken) {
+    const gasPrice = await this.getWithdrawGas();
+    let gasLimit;
+    if (isToken) {
+      gasLimit = new ethers.utils.BigNumber("210000");
+    } else {
+      gasLimit = new ethers.utils.BigNumber("190000");
+    }
+    const result = gasLimit.mul(gasPrice);
+    const finalResult = ethers.utils.formatEther(result);
+    // console.log('finalResult: ' + finalResult);
+    return finalResult.toString();
+  }
+  /**
+   * 通过自定义的eth/bnb数量 计算出相应的nvt数量
+   * @param nvtUSD                            nvt的USDT价格
+   * @param number                           异构链币种数量
+   * @param heterogeneousChainUSD      异构链币种的USDT价格
+   */
+  calNvtByEth(nvtUSD, number, heterogeneousChainUSD) {
+    let ethAmount = ethers.utils.parseEther(number);
+    // console.log('ethAmount: ' + ethAmount.toString());
+    let nvtUSDBig = ethers.utils.parseUnits(nvtUSD, 6);
+    let ethUSDBig = ethers.utils.parseUnits(heterogeneousChainUSD, 6);
+    let result = ethAmount.mul(ethUSDBig).div(ethers.utils.parseUnits(nvtUSDBig.toString(), 10));
+    // console.log('result: ' + result.toString());
+    // console.log('result format: ' + ethers.utils.formatUnits(result, 8));
+    let numberStr = ethers.utils.formatUnits(result, 8).toString();
+    let ceil = Math.ceil(numberStr);
+    // console.log('ceil: ' + ceil);
+    let finalResult = ethers.utils.parseUnits(ceil.toString(), 8);
+    // console.log('finalResult: ' + finalResult);
+    return finalResult.toString();
   }
 }

@@ -2,6 +2,7 @@ import { BigNumber } from "bignumber.js";
 import copy from "copy-to-clipboard";
 import ExtensionPlatform from "./extension";
 import sdk from "nerve-sdk-js/lib/api/sdk";
+import { request } from "./request";
 var CryptoJS = require("crypto-js");
 
 // 10的N 次方
@@ -36,12 +37,10 @@ export function Division(nu, arg) {
 
 // 数字乘以精度系数
 export function timesDecimals(nu, decimals) {
-  let newInfo = JSON.parse(sessionStorage.getItem("info")) || "";
-  let newDecimals = decimals ? decimals : newInfo.defaultAsset.decimals;
   if (decimals === 0) {
     return nu
   }
-  return new BigNumber(Times(nu, Power(newDecimals)))
+  return new BigNumber(Times(nu, Power(decimals)))
     .toFormat()
     .replace(/[,]/g, "");
 }
@@ -50,12 +49,10 @@ export function timesDecimals(nu, decimals) {
  * 数字除以精度系数
  */
 export function divisionDecimals(nu, decimals) {
-  let newInfo = JSON.parse(sessionStorage.getItem("info")) || "";
-  let newDecimals = decimals ? decimals : newInfo.defaultAsset.decimals;
   if (decimals === 0) {
-    return nu
+    return nu;
   }
-  return new BigNumber(Division(nu, Power(newDecimals)))
+  return new BigNumber(Division(nu, Power(decimals)))
     .toFormat()
     .replace(/[,]/g, "");
 }
@@ -198,4 +195,90 @@ export function getOrigin(chain, network) {
     },
   }
   return origins[chain][network];
+}
+
+export async function getStorage(key, defaultValue) {
+  return (await ExtensionPlatform.get(key))[key] || defaultValue;
+}
+
+export async function getSelectedAccount() {
+  const accountList = await getStorage("accountList", []);
+  const currentAccount = accountList.filter(account => account.selection)[0];
+  const defaultAccount = currentAccount
+    ? { beta: currentAccount.beta, main: currentAccount.main }
+    : null;
+  return defaultAccount;
+}
+
+export async function getSymbolUSD(chain) {
+  const res = await request({
+    url: "/wallet/main/asset/price",
+    data: { chain }
+  });
+  if (res.code === 1000) {
+    return res.data;
+  }
+  return null;
+}
+
+export async function checkBalance(fee) {
+  const symbolArr = fee.split("+");
+  const symbolToChain = {
+    ETH: "Ethereum",
+    BNB: "BSC",
+    NVT: "NERVE",
+    NULS: "NULS"
+  }
+  let enough = true;
+  const accountList = await getStorage("accountList", []);
+  const currentAccount = accountList.filter(account => account.selection)[0];
+  const network = await getStorage("network");
+  const config = JSON.parse(sessionStorage.getItem("config"));
+  Object.keys(symbolToChain).map(symbol => {
+    symbolArr.map(async fee => {
+      if (fee.indexOf(symbol) > -1) {
+        const chain = symbolToChain[symbol];
+        const address = currentAccount[network][chain];
+        const {chainId, assetId} = config[network][chain];
+        const balance = await getBalance(chain, address, chainId, assetId)
+        if (balance - fee.split(symbol)[0] < 0) {
+          enough = false;
+        }
+      }
+    });
+  });
+  return enough;
+}
+
+async function getBalance(chain, address, chainId, assetId) {
+  let balance = 0;
+  try {
+    const res = await request({
+      url: "/wallet/address/asset",
+      data: { chain, address, chainId, assetId }
+    });
+    if (res.code === 1000) {
+      balance = divisionDecimals(res.data.balance, res.data.decimals);
+    }
+  } catch (e) {}
+  return balance;
+}
+
+export async function checkNvtBalance(fee) {
+  const accountList = await getStorage("accountList", []);
+  const currentAccount = accountList.filter(account => account.selection)[0];
+  const network = await getStorage("network");
+  const config = JSON.parse(sessionStorage.getItem("config"));
+  const address = currentAccount[network].NERVE;
+  const {chainId, assetId} = config[network].NERVE;
+
+  const res = await this.$request({
+    url: "/wallet/address/asset",
+    data: { chain: "NERVE", address, chainId, assetId }
+  });
+  let balance = 0;
+  if (res.code === 1000) {
+    balance = divisionDecimals(res.data.balance, res.data.decimals);
+  }
+  return balance - fee > 0 ? true : false;
 }

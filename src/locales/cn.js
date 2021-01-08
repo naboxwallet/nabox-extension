@@ -65,7 +65,10 @@ const cn = {
     home9: "资产",
     home10: "交易记录",
     home11: "隐藏小额资产",
-    home12: "资产总览"
+    home12: "资产总览",
+    home13: "当前已连接应用",
+    home14: "断开",
+    home15: "连接当前网站"
   },
   innerTransfer: {
     innerTransfer1: "内部转账",
@@ -94,6 +97,7 @@ const cn = {
     transfer18: "中",
     transfer19: "快",
     transfer20: "自定义",
+    transfer21: "手续费不足",
   },
   transferConfirm: {
     transferConfirm1: "转账确认",

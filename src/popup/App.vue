@@ -8,6 +8,7 @@
 
 <script>
 import ExtensionPlatform from "@/utils/extension";
+import { getStorage } from "@/utils/util";
 export default {
   name: "App",
   data() {
@@ -21,11 +22,13 @@ export default {
   },
   async mounted() {
     // await ExtensionPlatform.clear(); //清除本地数据
-    await ExtensionPlatform.remove("naboxBridge");
-    const accountList =
-      (await ExtensionPlatform.get("accountList")).accountList || [];
-    console.log(accountList, 888);
-    const network = (await ExtensionPlatform.get("network")).network || "main";
+    // await ExtensionPlatform.remove("naboxBridge");
+    // await ExtensionPlatform.remove("allowSites");
+    var a = await ExtensionPlatform.get();
+    console.log(a, 55);
+    const accountList = await getStorage("accountList", []);
+    const network = await getStorage("network", "main");
+    console.log(accountList, network, "app-mounted");
     this.$store.commit("setAccount", accountList);
     this.$store.commit("setNetwork", network);
   }

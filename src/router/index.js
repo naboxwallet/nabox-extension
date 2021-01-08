@@ -82,6 +82,11 @@ const routes = [
     component: () => import("../views/users/Authorization.vue")
   },
   {
+    path: "/notification/authorization",
+    name: "NotificationAuthorization",
+    component: () => import("../views/notification/Authorization.vue")
+  },
+  {
     path: "/about",
     name: "About",
     // route level code-splitting
