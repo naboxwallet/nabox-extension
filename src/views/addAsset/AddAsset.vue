@@ -1,7 +1,7 @@
 <template>
   <div class="add-asset">
     <common-head>{{ $t("addAsset.addAsset1") }}</common-head>
-    <div class="content">
+    <div class="content" v-loading="loading">
       <el-input
         v-model="searchVal"
         :placeholder="$t('addAsset.addAsset2')"
@@ -38,7 +38,8 @@ export default {
   data() {
     return {
       searchVal: "",
-      assetsList: []
+      assetsList: [],
+      loading: false
     };
   },
 
@@ -76,8 +77,9 @@ export default {
         : item.chainId + "-" + item.assetId;
     },
     async searchAsset() {
+      this.loading = true;
       const res = await this.$request({
-        url: "/wallet/asset/query",
+        url: "/asset/query",
         data: {
           chain: this.$route.query.chain,
           searchKey: this.searchVal.toUpperCase()
@@ -100,6 +102,7 @@ export default {
         })
         this.assetsList = res.data;
       }
+      this.loading = false;
     },
     async focusAsset(item) {
       // console.log(item, 44)

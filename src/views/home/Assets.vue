@@ -176,7 +176,6 @@ export default {
       this.$emit("toAssetDetail", params);
     },
     toTxDetail(item) {
-      console.log(item, 88)
       this.$emit("toTxDetail", item);
     },
     toTransfer(cross) {
@@ -187,7 +186,6 @@ export default {
       this.$emit("toAddAsset");
     },
     loadMoreTx() {
-      console.log(55)
       this.$emit("loadMoreTx");
     }
   }

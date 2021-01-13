@@ -48,7 +48,7 @@
             :rules="transferRules"
             ref="transferForm"
           >
-            <el-form-item :label="$t('public.symbol')">
+            <el-form-item :label="$t('public.symbol')" prop="symbol">
               <el-select v-model="transferModal.symbol" @change="changeType">
                 <el-option
                   v-for="item in assetsList"
@@ -68,6 +68,18 @@
                 </el-button>
               </el-input>
             </el-form-item>
+            <p class="approve-tip" v-if="isCrossIn && needAllowance">
+              <img v-if="refreshAllowance" src="../../assets/img/loading.svg" />
+              <template v-else>
+                <span>{{ $t("transfer.transfer22") }}</span>
+                <br />
+                <el-button type="text" @click="approveERC20">
+                  {{ $t("transfer.transfer23") }}
+                </el-button>
+                &nbsp;&nbsp;&nbsp;
+                <i class="el-icon-refresh click" @click="getERC20Allowance"></i>
+              </template>
+            </p>
             <el-form-item :label="$t('public.remark')">
               <el-input
                 type="textarea"
@@ -120,7 +132,7 @@
                 </el-checkbox>
               </template>
               <template v-else>
-                <span v-if="extraFee">
+                <span v-if="toNetwork === 'NULS'">
                   {{ fee }} {{ chainToSymbol.NERVE }} + {{ extraFee }}
                   {{ chainToSymbol.NULS }}
                 </span>
@@ -129,79 +141,12 @@
                   {{ chainToSymbol.NULS }}
                 </span>
               </template>
-              <!-- <template v-if="isWithdrawal">
-                <template v-if="!custom">
-                  <img src="../../assets/img/loading.svg" v-if="feeLoading" />
-                  <div v-else class="custom-wrap">
-                    <el-radio-group
-                      v-model="feeType"
-                      @change="feeTypeChange"
-                      size="mini"
-                    >
-                      <el-radio-button label="1">{{ $t("transfer.transfer17") }}</el-radio-button>
-                      <el-radio-button label="2">{{ $t("transfer.transfer18") }}</el-radio-button>
-                      <el-radio-button label="3">{{ $t("transfer.transfer19") }}</el-radio-button>
-                    </el-radio-group>
-                    <el-button type="text" @click="custom = true">{{ $t("transfer.transfer20") }}</el-button>
-                    <p class="fee-number">
-                      {{ fee }} {{ chainToSymbol[fromNetwork] }}
-                      <span v-if="extraFee">
-                        + {{ extraFee }}{{ chainToSymbol.NERVE }}
-                      </span>
-                    </p>
-                  </div>
-                </template>
-                <template v-else>
-                  <el-input
-                    v-model="withdrawalFeeForETH"
-                    @input="customFeeChange"
-                    class="custom-input"
-                  >
-                    <template slot="append">{{ selectHeterogeneousChain }}</template>
-                  </el-input>
-                  <span class="fee-transform">
-                    ≈ <span>{{ ETHToNVT }}{{chainToSymbol.NERVE}}</span>
-                  </span>
-                  <el-button
-                    class="cancel-btn"
-                    type="text"
-                    @click="custom = false"
-                  >
-                    {{ $t("public.cancel") }}
-                  </el-button>
-                  <el-button type="text" @click="customFee">
-                    {{ $t("public.confirm") }}
-                  </el-button>
-                </template>
-              </template>
-              <template v-if="isCrossIn">
-                <span v-if="!feeLoading">
-                  {{ fee }}{{ chainToSymbol[fromNetwork] }}
-                  <span v-if="toNetwork === 'NULS'">
-                    + {{ extraFee }} {{ chainToSymbol.NERVE }} + {{ extraFee }}
-                    {{ chainToSymbol.NULS }}
-                  </span>
-                </span>
-                <img v-else src="../../assets/img/loading.svg" />
-                <el-checkbox v-model="speedUpFee" @change="changeSpeedUpFee">
-                  {{ $t("transfer.transfer14") }}
-                </el-checkbox>
-              </template>
-              <template v-else>
-                <span v-if="extraFee">
-                  {{ fee }} {{ chainToSymbol.NERVE }} + {{ extraFee }}
-                  {{ chainToSymbol.NULS }}
-                </span>
-                <span v-else>
-                  {{ fee }}
-                  {{ chainToSymbol.NULS }}
-                </span>
-              </template> -->
             </div>
             <el-button
               class="btn"
               type="primary"
               @click="checkForm('transferForm')"
+              :disabled="disabledBtn"
             >
               {{ $t("public.next") }}
             </el-button>
@@ -226,6 +171,18 @@ import { NTransfer, ETransfer, crossFee } from "@/utils/api";
 import { getContractCallData } from "@/utils/nulsContractValidate";
 export default {
   data() {
+    const validataSymbol = async (rule, value, callback) => {
+      if (this.isCrossIn && !this.heterogeneousChain_In.heterogeneousChainId) {
+        callback(new Error(this.$t("transfer.transfer24") + "NERVE"));
+      } else if (
+        this.isWithdrawal &&
+        !this.heterogeneousChain_Out.heterogeneousChainId
+      ) {
+        callback(new Error(this.$t("transfer.transfer24") + this.toNetwork));
+      } else {
+        callback();
+      }
+    };
     const validateAmount = async (rule, value, callback) => {
       const decimals = this.chooseAsset.decimals || 8;
       const patrn = new RegExp(
@@ -272,6 +229,7 @@ export default {
         price: 25
       },
       transferRules: {
+        symbol: [{ validator: validataSymbol, trigger: ["change"] }],
         amount: [{ validator: validateAmount, trigger: ["blur", "change"] }]
       },
       fee: "",
@@ -279,16 +237,20 @@ export default {
       showConfirm: false,
       transferLoading: false,
       speedUpFee: false, // eth bsc加速
-      feeLoading: true,
+      withdrawalFeeLoading: false,
+      crossInFeeLoading: false,
       custom: false, // nerve提现到eth bsc是否自定义手续费
       feeType: 2, //手续费等级 1：慢，2：中，3：快
       withdrawalFeeForETH: "", //提现手续费兑eth
       ETHToNVT: "", // 异构网络币价格兑NVT
       selectHeterogeneousChain: "ETH",
       type: 10, //nerve nuls 交易类型
-      heterogeneousChain: {}, // 跨链转入、转出选中的异构链
-      isWithdrawal: false, // 是否是提现到eth、bnb
-      isCrossIn: false, // 是否是eth 、bnb跨链到nerve、nuls
+      heterogeneousChain_In: {}, // 跨链转入异构链
+      heterogeneousChain_Out: {}, // 跨链转出的异构链
+      /* isWithdrawal: false, // 是否是提现到eth、bnb
+      isCrossIn: false, // 是否是eth 、bnb跨链到nerve、nuls */
+      needAllowance: false, // erc20 资产跨链转入到nerve是否需要授权
+      refreshAllowance: true,
     };
   },
 
@@ -323,15 +285,86 @@ export default {
         const account = { ...this.$store.getters.currentAccount[this.network] };
         this.toAddress = account[val];
         this.calTransferFee();
+        this.getHeterogeneousChain();
+      }
+    },
+    chooseAsset: {
+      deep: true,
+      handler() {
+        this.getHeterogeneousChain();
+        if (this.fromNetwork !== "NULS" && this.fromNetwork !== "NERVE") {
+          this.getERC20Allowance();
+        }
       }
     }
   },
 
   computed: {
+    feeLoading() {
+      return this.withdrawalFeeLoading || this.crossInFeeLoading;
+    },
+    // 是否是提现到eth、bnb
+    isWithdrawal() {
+      const NerveNuls = net => {
+        return ["NULS", "NERVE"].indexOf(net) > -1;
+      }
+      return (
+        (this.fromNetwork === "NULS" && this.toNetwork !== "NERVE") ||
+        (this.fromNetwork === "NERVE" && this.toNetwork !== "NULS") ||
+        (!NerveNuls(this.fromNetwork) && !NerveNuls(this.toNetwork))
+      );
+    },
+    // 是否是eth 、bnb跨链到nerve、nuls
+    isCrossIn() {
+      return this.fromNetwork !== "NULS" && this.fromNetwork !== "NERVE";
+    },
     confirmData() {
       let fee = "";
-      const nerveToNulsFee = crossFee + "NERVE" + "+" + crossFee + "NULS";
-      if (this.isWithdrawal) {
+      if (this.isWithdrawal && this.isCrossIn) {
+        fee =
+          this.fee +
+          this.chainToSymbol[this.fromNetwork] +
+          "+" +
+          this.extraFee +
+          this.chainToSymbol.NERVE;
+      } else if (this.isWithdrawal) {
+        if (this.extraFee) {
+          fee =
+            this.fee +
+            this.chainToSymbol[this.fromNetwork] +
+            "+" +
+            this.extraFee +
+            this.chainToSymbol.NERVE;
+        } else {
+          fee = this.fee + this.chainToSymbol[this.fromNetwork]
+        }
+      } else if (this.isCrossIn) {
+        if (this.toNetwork === "NULS") {
+          fee =
+            this.fee +
+            this.chainToSymbol[this.fromNetwork] +
+            "+" +
+            this.extraFee +
+            this.chainToSymbol.NERVE +
+            "+" +
+            this.extraFee +
+            this.chainToSymbol.NULS;
+        } else {
+          fee = this.fee + this.chainToSymbol[this.fromNetwork]
+        }
+      } else {
+        if (this.extraFee) {
+          fee =
+            this.fee +
+            this.chainToSymbol.NERVE +
+            "+" +
+            this.extraFee +
+            this.chainToSymbol.NULS;
+        } else {
+          fee = this.fee + this.chainToSymbol.NULS;
+        }
+      }
+      /* if (this.isWithdrawal) {
         const normalFee = this.fee + this.chainToSymbol[this.fromNetwork];
         fee = this.extraFee
           ? normalFee + "+" + this.extraFee + this.chainToSymbol.NERVE
@@ -344,7 +377,7 @@ export default {
             : crossInFee;
       } else {
         fee = this.toNetwork === "NULS" ? nerveToNulsFee : crossFee + "NULS";
-      }
+      } */
       return {
         from: superLong(this.fromAddress, 12),
         to: superLong(this.toAddress, 12),
@@ -356,6 +389,12 @@ export default {
     },
     network() {
       return this.$store.state.network;
+    },
+    disabledBtn() {
+      if (this.feeLoading || this.needAllowance) {
+        return true;
+      }
+      return false;
     }
   },
 
@@ -418,15 +457,15 @@ export default {
     },
     // 计算跨链手续费
     calTransferFee() {
-      this.isWithdrawal = false;
-      this.isCrossIn = false;
+      /* this.isWithdrawal = false;
+      this.isCrossIn = false; */
       this.fee = "";
       this.extraFee = "";
       const fromNetwork = this.fromNetwork;
       const toNetwork = this.toNetwork;
-      this.getHeterogeneousChain();
+      // this.getHeterogeneousChain();
       const withdrawal = () => {
-        this.isWithdrawal = true;
+        // this.isWithdrawal = true;
         this.calculateFee();
         this.withdrawalTransfer = new ETransfer({
           chain: this.toNetwork,
@@ -446,7 +485,7 @@ export default {
           withdrawal();
         }
       } else {
-        this.isCrossIn = true;
+        // this.isCrossIn = true;
         this.crossInTransfer = new ETransfer({
           chain: this.fromNetwork,
           network: this.$store.state.network
@@ -461,11 +500,18 @@ export default {
     },
     // 获取跨链转入、跨链转出的异构链
     getHeterogeneousChain() {
+      this.heterogeneousChain_In = {};
+      this.heterogeneousChain_Out = {};
       if (!this.chooseAsset.heterogeneousList) return;
-      const heterogeneousChain = this.chooseAsset.heterogeneousList.filter(
+      const heterogeneousChain_In = this.chooseAsset.heterogeneousList.filter(
+        v => v.chainName === this.fromNetwork
+      )[0];
+      const heterogeneousChain_Out = this.chooseAsset.heterogeneousList.filter(
         v => v.chainName === this.toNetwork
       )[0];
-      this.heterogeneousChain = heterogeneousChain;
+      console.log(heterogeneousChain_In,"in--out", heterogeneousChain_Out);
+      this.heterogeneousChain_In = heterogeneousChain_In || {};
+      this.heterogeneousChain_Out = heterogeneousChain_Out || {};
     },
     getMainInfo(chain) {
       const network = this.$store.state.network;
@@ -474,35 +520,61 @@ export default {
     },
     // 充值、提现加速
     async changeSpeedUpFee(e) {
-      if (e) {
-        this.getSpeedUpFee();
-      } else {
-        this.getGasPrice();
+      if (this.isWithdrawal) {
+        this.calculateFee();
+      }
+      if (this.isCrossIn) {
+        if (e) {
+          this.getSpeedUpFee();
+        } else {
+          this.getGasPrice();
+        }
       }
     },
     // 计算eth bnb跨链转账手续费
     async getGasPrice() {
-      this.feeLoading = true;
+      this.crossInFeeLoading = true;
       const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
       this.fee = await this.crossInTransfer.getGasPrice(gasLimit);
       if (this.toNetwork !== "NERVE" && this.toNetwork !== "NULS") {
         this.extraFee = this.defaultWithdrawalFee;
       }
-      this.feeLoading = false;
+      this.crossInFeeLoading = false;
     },
     // 计算eth bnb加速跨链转账手续费
     async getSpeedUpFee() {
-      this.feeLoading = true;
+      this.crossInFeeLoading = true;
       const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
       this.fee = await this.crossInTransfer.getSpeedUpFee(gasLimit);
       if (this.toNetwork !== "NERVE" && this.toNetwork !== "NULS") {
-        this.extraFee = this.defaultWithdrawalFee + 3;
+        this.extraFee = this.defaultWithdrawalFee;
       }
-      this.feeLoading = false;
+      this.crossInFeeLoading = false;
+    },
+    //查询erc20资产授权额度
+    async getERC20Allowance() {
+      const {
+        contractAddress,
+        heterogeneousChainMultySignAddress,
+        token
+      } = this.heterogeneousChain_In;
+      console.log(this.heterogeneousChain_In, "异构转入链info")
+      this.refreshAllowance = true;
+      this.needAllowance = true;
+      if (token) {
+        this.needAllowance = await this.crossInTransfer.getERC20Allowance(
+          contractAddress,
+          heterogeneousChainMultySignAddress,
+          this.fromAddress
+        );
+      } else {
+        this.needAllowance = false;
+      }
+      this.refreshAllowance = false;
     },
     // 计算nerve提现到eth bsc手续费
     async calculateFee() {
-      this.feeLoading = true;
+      this.withdrawalFeeLoading = true;
       const nvtUSD = await getSymbolUSD("NERVE");
       this.nvtUSD = nvtUSD + "";
       const heterogeneousChainUSD = await getSymbolUSD(this.toNetwork);
@@ -514,16 +586,17 @@ export default {
 
     //获取默认手续费 -nvt
     async calWithdrawalNVTFee() {
+      console.log(this.heterogeneousChain_Out, 6566)
       const result = await this.withdrawalTransfer.calWithdrawalNVTFee(
         this.nvtUSD,
         this.heterogeneousChainUSD,
-        this.heterogeneousChain.token
+        this.heterogeneousChain_Out.token
       );
       const MAIN_INFO = this.getMainInfo("NERVE");
       const defaultFee = Number(divisionDecimals(result, MAIN_INFO.decimal));
       // const slow = defaultFee - 3 < 1 ? 1 : defaultFee - 3;
-      // const fast = defaultFee + 3;
-      const fee = defaultFee + this.normalFee;
+      const chooseFee = this.speedUpFee ? defaultFee + 3 : defaultFee;
+      const fee = chooseFee + this.normalFee;
       this.defaultWithdrawalFee = fee;
       if (this.fromNetwork === "NULS" || this.isCrossIn) {
         this.extraFee = fee;
@@ -531,11 +604,11 @@ export default {
         this.fee = fee;
       }
       // this.defaultFeeList = [slow, defaultFee, fast];
-      this.feeLoading = false;
+      this.withdrawalFeeLoading = false;
     },
     //默认手续费 --- eth
     async calWithdrawFee() {
-      const result = await this.withdrawalTransfer.calWithdrawFee(this.heterogeneousChain.token);
+      const result = await this.withdrawalTransfer.calWithdrawFee(this.heterogeneousChain_Out.token);
       this.withdrawalFeeForETH = result;
       this.customFeeChange(result);
     },
@@ -572,8 +645,7 @@ export default {
     // 选择资产
     changeType(item) {
       this.chooseAsset = this.assetsList.filter(v => item === v.ids)[0]; //选择的转账资产
-      this.checkCanCross();
-      this.getHeterogeneousChain();
+      // this.checkCanCross();
       this.validateParameter();
     },
     checkCanCross() {
@@ -586,6 +658,7 @@ export default {
           const heterogeneousChain = this.chooseAsset.heterogeneousList.map(
             v => v.chainName
           );
+          heterogeneousChain.push("NULS", "NERVE");
           networkList.map(n => {
             n.disabled = heterogeneousChain.indexOf(n.network) === -1;
           });
@@ -614,7 +687,7 @@ export default {
             this.chooseAsset.contractAddress,
             "transferCrossChain",
             this.transferModal.amount,
-            this.transferModal.decimals
+            this.chooseAsset.decimals
           );
           if (res.success) {
             this.fee = res.data.fee;
@@ -641,11 +714,48 @@ export default {
     superLong(str, len = 8) {
       return superLong(str, len);
     },
+    async approveERC20() {
+      const {
+        contractAddress,
+        heterogeneousChainMultySignAddress
+      } = this.heterogeneousChain_In;
+      const hex = await this.crossInTransfer.getApproveERC20Hex(
+        contractAddress,
+        heterogeneousChainMultySignAddress,
+        this.fromAddress
+      );
+      console.log(hex, "授权hex");
+      if (hex) {
+        this.authorCross(hex);
+      }
+    },
+    // 广播授权交易
+    async authorCross(txHex) {
+      const res = await this.$request({
+        url: "/tx/cross/transfer",
+        data: {
+          chain: this.chain,
+          txHex
+        }
+      })
+      if (res.code === 1000) {
+        this.$message({
+          type: "success",
+          message: this.$t("transfer.transfer25"),
+          duration: 2000
+        });
+      } else {
+        this.$message({
+          type: "error",
+          message: res.msg,
+          duration: 3000
+        });
+      }
+    },
     checkForm(formName) {
       this.$refs[formName].validate(async valid => {
         if (valid) {
           const enoughFee = await checkBalance(this.confirmData.fee);
-          console.log(enoughFee, 55555555555);
           if (enoughFee) {
             this.showConfirm = true;
           } else {
@@ -663,30 +773,35 @@ export default {
     },
     async submit() {
       this.transferLoading = true;
-      let txHex = "";
       const fromNetwork = this.fromNetwork;
       const toNetwork = this.toNetwork;
       let hex1 = "",
         hex2 = "";
       try {
         if (fromNetwork === "NULS") {
-          hex1 = await this.getNerveNuls("NULS"); // nuls 跨到nerve hex
+          hex1 = await this.getNerveNulsHex("NULS"); // nuls 跨到nerve hex
           if (toNetwork !== "NERVE") {
             hex2 = await this.getWithdrawalHex("NERVE"); // nerve提现到eth，bnb hex
           }
         } else if (fromNetwork === "NERVE") {
           if (toNetwork === "NULS") {
-            hex1 = await this.getNerveNuls("NERVE");
+            hex1 = await this.getNerveNulsHex("NERVE");
           } else {
             hex1 = await this.getWithdrawalHex();
           }
         } else {
           hex1 = await this.getCrossInHex(); // eht、bnb跨链到nerve hex
           if (toNetwork === "NULS") {
-            hex2 = await this.getNerveNuls("NERVE");
+            hex2 = await this.getNerveNulsHex("NERVE");
           } else if (toNetwork !== "NERVE") {
             hex2 = await this.getWithdrawalHex();
           }
+        }
+        console.log(hex1, "===---===", hex2);
+        if (hex1) {
+          await this.broadcastTxCross(hex1, hex2);
+        } else {
+          console.error("签名失败");
         }
       } catch (e) {
         console.error("跨链交易签名失败" + e);
@@ -696,10 +811,9 @@ export default {
           duration: 2000
         });
       }
-      await this.broadcastTxCross(txHex);
       this.transferLoading = false;
     },
-    async getNerveNuls(chain) {
+    async getNerveNulsHex(chain) {
       const network = this.$store.state.network;
       const MAIN_INFO = this.getMainInfo(chain);
       const currentAccount = this.$store.getters.currentAccount[network];
@@ -719,7 +833,6 @@ export default {
         fee: timesDecimals(this.fee, MAIN_INFO.decimal)
       };
       let txData = {};
-      let txHex = "";
       if (type === 16) {
         //nuls 合约token跨链
         transferInfo.assetsChainId = MAIN_INFO.chainId;
@@ -730,22 +843,12 @@ export default {
         txData = this.contractCallData;
       }
       const inputOuput = await transfer.inputsOrOutputs(transferInfo);
-      try {
-        txHex = await transfer.getTxHex({
-          inputs: inputOuput.inputs,
-          outputs: inputOuput.outputs,
-          remarks: this.transferModal.remarks,
-          txData
-        });
-      } catch (e) {
-        console.error("跨链交易签名失败" + e);
-        this.$message({
-          type: "error",
-          message: e,
-          duration: 2000
-        });
-      }
-      return txHex;
+      return await transfer.getTxHex({
+        inputs: inputOuput.inputs,
+        outputs: inputOuput.outputs,
+        remarks: this.transferModal.remarks,
+        txData
+      });
     },
 
     async getWithdrawalHex() {
@@ -757,61 +860,88 @@ export default {
       });
       const MAIN_INFO = this.getMainInfo("NERVE");
       const currentAccount = this.$store.getters.currentAccount[network];
+      const assetInfo = this.chooseAsset.contractAddress
+        ? {
+            fromChain: this.fromNetwork,
+            contractAddress: this.chooseAsset.contractAddress
+          }
+        : {
+            assetsChainId: this.chooseAsset.chainId,
+            assetsId: this.chooseAsset.assetId
+          };
       const transferInfo = {
         from: currentAccount.NERVE,
-        assetsChainId: this.chooseAsset.chainId,
-        assetsId: this.chooseAsset.assetId,
         amount: timesDecimals(this.transferModal.amount, this.chooseAsset.decimals),
-        proposalPrice: timesDecimals(Minus(this.fee, this.normalFee), MAIN_INFO.decimal),
-        fee: timesDecimals(this.normalFee, MAIN_INFO.decimal)
+        proposalPrice: timesDecimals(Minus(this.defaultWithdrawalFee, this.normalFee), MAIN_INFO.decimal),
+        fee: timesDecimals(this.normalFee, MAIN_INFO.decimal),
+        ...assetInfo
       };
       const inputOuput = await transfer.inputsOrOutputs(transferInfo);
       const txData = {
         heterogeneousAddress: this.toAddress,
-        heterogeneousChainId: this.heterogeneousChain.heterogeneousChainId
+        heterogeneousChainId: this.heterogeneousChain_Out.heterogeneousChainId
       };
-      let txHex = "";
-      try {
-        txHex = await transfer.getTxHex({
-          inputs: inputOuput.inputs,
-          outputs: inputOuput.outputs,
-          remarks: this.transferModal.remarks,
-          txData
-        });
-      } catch (e) {
-        console.error("跨链交易签名失败" + e);
-        this.$message({
-          type: "error",
-          message: e,
-          duration: 2000
-        });
-      }
-      return txHex;
+      return await transfer.getTxHex({
+        inputs: inputOuput.inputs,
+        outputs: inputOuput.outputs,
+        remarks: this.transferModal.remarks,
+        txData
+      });
     },
 
     async getCrossInHex() {
-      const heterogeneousChainId = this.chain === "BSC" ? 102 : 101;
-      const heterogeneousChainInfo = this.chooseAsset.heterogeneousList.filter(
-        item => item.heterogeneousChainId === heterogeneousChainId
-      )[0];
       // console.log(this.chooseAsset, 555)
-      let txHex = "";
-      try {
-        txHex = await this.crossInTransfer.getCrossInTxHex({
-          from: this.transferModal.from,
-          to: this.transferModal.to,
-          value: this.transferModal.amount,
-          upSpeed: this.speedUpFee, //是否加速
-          multySignAddress: heterogeneousChainInfo.heterogeneousChainMultySignAddress,
-          contractAddress: heterogeneousChainInfo.contractAddress,
-          tokenDecimals: this.chooseAsset.decimals
+      console.log(this.heterogeneousChain_In, "this.heterogeneousChain_In")
+      // const to = this.toNetwork === "NERVE" ? this.to
+      const currentAccount = this.$store.getters.currentAccount[this.$store.state.network];
+      const to = this.toNetwork === "NERVE" ? this.toAddress : currentAccount.NERVE;
+      return await this.crossInTransfer.getCrossInTxHex({
+        from: this.fromAddress,
+        to,
+        value: this.transferModal.amount,
+        upSpeed: this.speedUpFee, //是否加速
+        multySignAddress: this.heterogeneousChain_In.heterogeneousChainMultySignAddress,
+        contractAddress: this.heterogeneousChain_In.contractAddress,
+        tokenDecimals: this.chooseAsset.decimals
+      });
+    },
+    async broadcastTxCross(hex1, hex2) {
+      const assetInfo = this.chooseAsset.contractAddress
+        ? { contractAddress: this.chooseAsset.contractAddress }
+        : {
+            chainId: this.chooseAsset.chainId,
+            assetId: this.chooseAsset.assetId
+          };
+      const params = {
+        fromChain: this.fromNetwork,
+        toChain: this.toNetwork,
+        fromAddress: this.fromAddress,
+        toAddress: this.toAddress,
+        txHex: hex1,
+        ...assetInfo
+      };
+      if (hex2) {
+        params.crossTxHex = hex2;
+      }
+      const res = await this.$request({
+        url: "/tx/cross/transfer",
+        method: "post",
+        data: params
+      });
+      if (res.code === 1000) {
+        this.$message({
+          type: "success",
+          message: this.$t("transfer.transfer13"),
+          duration: 2000
         });
-      } catch (e) {
-        console.error("跨链交易签名失败" + e);
+        setTimeout(() => {
+          this.$router.push("/");
+        }, 1500);
+      } else {
         this.$message({
           type: "error",
-          message: e,
-          duration: 2000
+          message: res.msg,
+          duration: 3000
         });
       }
     }
@@ -892,6 +1022,13 @@ export default {
         }
       }
     }
+    .approve-tip {
+      .el-button {
+        padding: 0;
+        font-size: 12px;
+        border: none;
+      }
+    }
     .fee {
       display: block;
       .fee-label {
@@ -933,7 +1070,7 @@ export default {
     }
     .btn {
       width: 100%;
-      margin-top: 20px;
+      margin: 20px 0;
     }
   }
 }

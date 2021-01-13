@@ -63,7 +63,6 @@ export default {
       this.$emit("toDetail", item);
     },
     load() {
-      console.log(44)
       this.$emit("loadMoreTx");
     }
   }

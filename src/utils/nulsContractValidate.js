@@ -4,7 +4,7 @@ import sdk from "nerve-sdk-js/lib/api/sdk";
 import utils from "nuls-sdk-js/lib/utils/utils";
 /**
  * from
- * to  
+ * to
  * price
  * contractAddress
  * methodName
@@ -14,22 +14,24 @@ import utils from "nuls-sdk-js/lib/utils/utils";
 
 export async function getContractCallData(from, to, price, contractAddress, methodName, amount, decimals) {
   const gasLimit = sdk.CONTRACT_MAX_GASLIMIT;
+  const methodDesc = "";
   let newValue = 0;
   let args = [];
+  let newContractAddress = contractAddress;
   if (methodName === "transfer") {
     /// nuls 合约资产  普通token转账、向合约地址转token
     args = [to, timesDecimals(amount, decimals)]
   } else if (methodName === "_payable") {
     //合约 payable 向合约地址转nuls
-    newValue = Number(Times(this.transferModal.amount, 100000000));
+    newValue = Number(Times(amount, 100000000));
+    newContractAddress = to;
   } else if (methodName === "transferCrossChain") {
     // token跨链转账
     args = [to, timesDecimals(amount, decimals)];
     newValue = Number(timesDecimals(0.1, 8));
   }
-  return await validateContractCall(from, newValue, gasLimit, price, contractAddress, methodName, methodDesc, args)
+  return await validateContractCall(from, newValue, gasLimit, price, newContractAddress, methodName, methodDesc, args)
 }
-
 
 /**
  * 验证调用合约交易

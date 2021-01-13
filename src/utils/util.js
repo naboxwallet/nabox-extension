@@ -212,7 +212,7 @@ export async function getSelectedAccount() {
 
 export async function getSymbolUSD(chain) {
   const res = await request({
-    url: "/wallet/main/asset/price",
+    url: "/asset/main/price",
     data: { chain }
   });
   if (res.code === 1000) {

@@ -16,57 +16,80 @@
         <label>{{ $t("public.createTime") }}</label>
         {{ txInfo.createTime }}
       </div>
-      <template v-if="txInfo.type === 10">
-        <div class="transfer-item">
-          <label>From</label>
-          <div class="from-info">
-            <span>NULS账户</span>
-            <p class="click">{{ superLong(txInfo.froms) }}</p>
+      <div class="transfer-item">
+        <label>{{ $t("public.txType") }}</label>
+        {{ $t("type." + txInfo.type) }}
+      </div>
+      <div class="transfer-tx-info" v-if="txInfo.isMultiCross">
+        <div class="from">
+          <p class="label">From</p>
+          <div class="transfer-info">
+            <span>{{ txInfo.fromChain }}</span>
+            <p
+              class="click"
+              @click="toUrl(txInfo.fromAddress, 'address', txInfo.fromChain)"
+            >
+              {{ superLong(txInfo.fromAddress) }}
+            </p>
+          </div>
+          <div class="transfer-info">
             <span>TXID</span>
-            <p class="click">{{ superLong("tNULSeBaMqspYMk6BAcvSWZS3PCSzBsro87imU") }}</p>
+            <p class="click" @click="toUrl(txInfo.fromHash, 'hash', txInfo.fromChain)">
+              {{ superLong(txInfo.fromHash) }}
+            </p>
           </div>
         </div>
-        <div class="transfer-item">
-          <label>To</label>
-          <div class="to-info">
-            <span>NULS账户</span>
-            <p class="click">{{ superLong(txInfo.tos) }}</p>
+        <div class="to">
+          <p class="label">To</p>
+          <div class="transfer-info">
+            <span>{{ txInfo.toChain }}</span>
+            <p class="click" @click="toUrl(txInfo.toAddress, 'address', txInfo.toChain)">
+              {{ superLong(txInfo.toAddress) }}
+            </p>
+          </div>
+          <div class="transfer-info">
             <span>TXID</span>
-            <p class="click">{{ superLong("tNULSeBaMqspYMk6BAcvSWZS3PCSzBsro87imU") }}</p>
+            <p class="click" @click="toUrl(txInfo.toHash, 'hash', txInfo.toChain)">
+              {{ superLong(txInfo.toHash) }}
+            </p>
           </div>
         </div>
-      </template>
+      </div>
       <template v-else>
-        <div class="transfer-item" v-if="txInfo.froms">
+        <div class="transfer-item">
           <label>From</label>
-          <span class="click" @click="toUrl(txInfo.froms, 'address')">
-            {{ txInfo.froms }}
+          <span class="click" @click="toUrl(txInfo.fromAddress, 'address')">
+            {{ superLong(txInfo.fromAddress) }}
           </span>
         </div>
-        <div class="transfer-item" v-if="txInfo.tos">
+        <div class="transfer-item">
           <label>To</label>
-          <span class="click" @click="toUrl(txInfo.tos, 'address')">
-            {{ txInfo.tos }}
+          <span class="click" @click="toUrl(txInfo.toAddress, 'address')">
+            {{ superLong(txInfo.toAddress) }}
           </span>
         </div>
         <div class="transfer-item">
           <label>TxID</label>
-          <span class="click" @click="toUrl(txInfo.id, 'hash')">
-            {{ txInfo.id }}
+          <span class="click" @click="toUrl(txInfo.hash, 'hash')">
+            {{ superLong(txInfo.hash) }}
           </span>
         </div>
       </template>
       <div class="transfer-item">
         <label>{{ $t("public.status") }}</label>
-        {{ $t("statusType." + txInfo.status) }}
+        {{
+          txInfo.isMultiCross
+            ? $t("crossStatusType." + txInfo.crossStatus)
+            : $t("statusType." + txInfo.status)
+        }}
       </div>
       <div class="transfer-item">
         <label>{{ $t("public.fee") }}</label>
         {{ txInfo.fee }}
       </div>
-      <div class="transfer-item">
+      <div class="transfer-item remark-wrap">
         <label>{{ $t("public.remark") }}</label>
-        {{ txInfo.remark }}
+        <span>{{ txInfo.remark }}</span>
       </div>
     </div>
   </div>
@@ -98,7 +121,7 @@ export default {
   mounted() {},
 
   methods: {
-    superLong(str, len = 8) {
+    superLong(str, len = 12) {
       return superLong(str, len);
     },
     async getTxInfo() {
@@ -107,15 +130,47 @@ export default {
         url: "/tx/coin/info",
         data: { chain, txHash, transCoinId }
       });
+      // const txInfo = {};
       if (res.code === 1000) {
-        res.data.amount = divisionDecimals(res.data.amount, res.data.decimals);
-        res.data.createTime = formatTime(res.data.createTime * 1000);
-        this.txInfo = res.data;
+        const data = res.data;
+        const commonInfo = {
+          amount: divisionDecimals(data.tx.amount, data.tx.decimals),
+          createTime: formatTime(data.tx.createTime * 1000),
+          fee: data.tx.fee,
+          symbol: data.tx.symbol,
+          remark: data.tx.remark,
+          type: data.tx.type
+        };
+        let txInfo = {};
+        if (data.crossTx) {
+          txInfo = {
+            fromChain: data.crossTx.fromChain,
+            fromAddress: data.crossTx.fromAddress,
+            fromHash: data.crossTx.txHash,
+            // fromStatus: data.crossTx.status,
+            toChain: data.crossTx.toChain,
+            toAddress: data.crossTx.toAddress,
+            toHash: data.crossTx.crossTxHash,
+            // toStatus: data.crossTx.status,
+            crossStatus: data.crossTx.status,
+            isMultiCross: true,
+            ...commonInfo
+          };
+        } else {
+          txInfo = {
+            fromAddress: data.tx.froms,
+            toAddress: data.tx.tos,
+            hash: data.tx.id,
+            status: data.tx.status,
+            ...commonInfo
+          };
+        }
+        this.txInfo = txInfo;
         this.loading = false;
       }
     },
-    toUrl(query, type) {
-      const chain = this.$route.query.chain;
+    toUrl(query, type, openChain) {
+      const chain = openChain || this.$route.query.chain;
       const origin = getOrigin(chain, this.$store.state.network);
       let url = "";
       if (chain === "NULS" || chain === "NERVE") {
@@ -171,5 +226,36 @@ export default {
       }
     }
   }
+  .remark-wrap {
+    flex-wrap: wrap;
+    span {
+      word-break: break-all;
+    }
+  }
+  .transfer-tx-info {
+    .from, .to {
+      margin-bottom: 12px;
+    }
+    .label {
+      color: #a5abb2;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    .transfer-info {
+      display: flex;
+      color: #3a3c44;
+      line-height: 1.4;
+      font-size: 12px;
+      align-items: center;
+      span {
+        width: 60px;
+        color: #6d757c;
+      }
+      p {
+        font-size: 14px;
+      }
+    }
+  }
+
 }
 </style>

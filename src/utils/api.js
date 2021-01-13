@@ -7,7 +7,8 @@ import {
   htmlEncode,
   getPri,
   timesDecimals,
-  decryptPassword
+  decryptPassword,
+  Minus
 } from "./util";
 import ExtensionPlatform from "./extension";
 import { request } from "./request";
@@ -142,7 +143,7 @@ export class NTransfer {
     );
     return txHex;
   }
-  inputsOrOutputs(data) {
+  async inputsOrOutputs(data) {
     if (!this.type) {
       throw "获取交易类型失败";
     }
@@ -160,7 +161,14 @@ export class NTransfer {
       return this.callContractTransaction(data);
     } else if (this.type === 43) {
       // nerve 网络提现到eth bsc
-      return this.WithdrawalTransaction(data);
+      const assetNerveInfo = await this.getAssetNerveInfo(data);
+      if (assetNerveInfo) {
+        data.assetsChainId = assetNerveInfo.chainId;
+        data.assetsId = assetNerveInfo.assetId;
+        return this.WithdrawalTransaction(data);
+      } else {
+        throw "获取该资产在nerve链上信息失败";
+      }
     }
   }
   //nuls nerve普通转账input output
@@ -366,6 +374,36 @@ export class NTransfer {
       console.error(e);
     }
   }
+  async getAssetNerveInfo(data) {
+    console.log(data, 888999)
+    let result = null;
+    let params = {};
+    if (data.contractAddress) {
+      const config = JSON.parse(sessionStorage.getItem("config"));
+      const mainAsset = config[this.network][data.fromChain];
+      params = {
+        chainId: mainAsset.chainId,
+        contractAddress: data.contractAddress
+      };
+    } else {
+      params = {
+        chainId: data.assetsChainId,
+        assetId: data.assetsId
+      };
+    }
+    try {
+      const res = await request({
+        url: "/asset/nerve/chain/info",
+        data: params
+      });
+      if (res.code === 1000) {
+        result = res.data;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return result;
+  }
 }
 
 const BNB_RPC_URL = {
@@ -383,7 +421,6 @@ const ERC20_ABI = [
 
 export class ETransfer {
   constructor(props) {
-    console.log(props, 44)
     if (!props.chain) {
       throw "未获取到网络，组装交易失败";
     }
@@ -469,7 +506,7 @@ export class ETransfer {
     return tx;
   }
   /**
-   * 交易签名 不会自动填充gaslimit、gasprice等值
+   * 链内交易签名 不会自动填充gaslimit、gasprice等值
    * to 交易地址
    * value 转账金额
    * upSpeed 是否加速
@@ -587,6 +624,70 @@ export class ETransfer {
       return await wallet.sign(transaction);
     }
   }
+  /**
+   * 查询erc20资产授权额度
+   * @param contractAddress ERC20合约地址
+   * @param multySignAddress 多签地址
+   * @param address 账户eth地址
+   */
+  async getERC20Allowance(contractAddress, multySignAddress, address) {
+    const contract = new ethers.Contract(
+      contractAddress,
+      ERC20_ABI,
+      this.provider
+    );
+    const allowancePromise = contract.allowance(address, multySignAddress);
+    return allowancePromise
+      .then(allowance => {
+        const baseAllowance =
+          "100000000000000000000000000000000000000000000000000000000000000000000000000000";
+        //已授权额度小于baseAllowance，则需要授权
+        return Minus(baseAllowance, allowance) >= 0;
+      })
+      .catch(e => {
+        console.error("获取erc20资产授权额度失败" + e);
+        return true;
+      });
+  }
+  /**
+   * 授权erc20额度
+   * @param contractAddress ERC20合约地址
+   * @param multySignAddress 多签地址
+   * @param address 账户eth地址
+   */
+  async getApproveERC20Hex(contractAddress, multySignAddress, address) {
+    const wallet = await this.getWallet();
+    const nonce = await wallet.getTransactionCount();
+    const gasPrice = await this.provider.getGasPrice();
+    const gasLimit = "100000";
+
+    const iface = new ethers.utils.Interface(ERC20_ABI);
+    const data = iface.functions.approve.encode([
+      multySignAddress,
+      new ethers.utils.BigNumber(
+        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      )
+    ]);
+    const transaction = {
+      to: contractAddress,
+      from: address,
+      value: "0x00",
+      data: data,
+      nonce,
+      gasLimit: Number(gasLimit),
+      gasPrice
+    };
+    const failed = await this.validate(transaction);
+    if (failed) {
+      console.error("failed approveERC20" + failed);
+      return null;
+    }
+    delete transaction.from;
+    return await wallet.sign(transaction);
+    // delete transaction.from   //etherjs 4.0 from参数无效 报错
+    // return wallet.sendTransaction(transaction);
+  }
+
   // 获取手续费
   getGasPrice(gasLimit) {
     return this.provider.getGasPrice().then(gasPrice => {

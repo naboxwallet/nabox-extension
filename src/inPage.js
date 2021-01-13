@@ -54,7 +54,7 @@ class NaboxBridge extends EventEmitter {
    */
   createSession() {
     return send("createSession").then(accounts => {
-      console.log(accounts, "==accounts==");
+      // console.log(accounts, "==accounts==");
       this.accounts = accounts;
       return accounts;
     });
@@ -92,15 +92,13 @@ class Inject {
         if (types.indexOf(type) > -1) this.emitEvent(type, payload);
       }
     });
-    /* window.naboxBridge.on("accountsChanged", (res)=>{console.log(res, "----account----")})
-    window.naboxBridge.on("networkChanged", (res)=>{console.log(res, "----network----")}) */
 
-    window.naboxBridge.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
+    /* window.naboxBridge.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
     window.naboxBridge.on("session_update", (error, res)=>{console.log(error, res, "----session_update----")})
-    window.naboxBridge.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")})
+    window.naboxBridge.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")}) */
   }
   emitEvent(type, data) {
-    console.log(type, 6666)
+    // console.log(type, 6666)
     // let property;
     switch (type) {
       case "connect":

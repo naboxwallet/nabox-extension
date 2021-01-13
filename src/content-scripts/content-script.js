@@ -161,13 +161,6 @@ class Content {
       if (!changes.naboxBridge) return;
       const newValue = changes.naboxBridge.newValue || {};
       const oldValue = changes.naboxBridge.oldValue || {};
-      // const naboxBridge = await getStorage("naboxBridge", {});
-      // console.log(naboxBridge, 8899, newValue, 999,oldValue)
-      /* const allowSites = naboxBridge.allowSites;
-      console.log(allowSites, 111, newValue.allowSites, 123, oldValue.allowSites, 456, newValue.allowSites===oldValue.allowSites)
-      if (newValue.allowSites !== oldValue.allowSites) {
-
-      } */
 
       this.checkConnected(newValue.allowSites, oldValue.allowSites);
 
@@ -178,8 +171,6 @@ class Content {
   }
 
   async checkConnected(newSites = [], oldSites = []) {
-    console.log(newSites, 123456, oldSites)
-
     if (newSites.length !== oldSites.length) {
       // 连接网站修改
       const authorizedNow = newSites.filter(site => {
@@ -188,7 +179,6 @@ class Content {
       const authorizedBefore = oldSites.filter(site => {
         return site === location.origin;
       })[0];
-      console.log(authorizedNow, "authorizedNow")
       if (authorizedNow) {
         if (authorizedNow !== authorizedBefore) {
           const defaultAccount = await getSelectedAccount();
@@ -210,10 +200,8 @@ class Content {
     }
   }
   async checkCurrentAccount(newAccount = {}, oldAccount = {}) {
-    // console.log(newAccount, 456, oldAccount)
     if (newAccount.pub !== oldAccount.pub) {
       const defaultAccount = await getSelectedAccount();
-      console.log(newAccount.beta.NULS, "====currentAccount====", defaultAccount.beta.NULS)
       const network = await getStorage("network", "")
       window.postMessage({
         type: "session_update",
@@ -226,7 +214,6 @@ class Content {
   }
 
   async checkNetwork(newNetwork, oldNetwork) {
-    // console.log(newNetwork, 789, oldNetwork)
     if (newNetwork !== oldNetwork) {
       const defaultAccount = await getSelectedAccount();
       window.postMessage({

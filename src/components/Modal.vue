@@ -1,6 +1,6 @@
 <template>
   <transition name="modal-transform">
-    <div v-show="visiable" class="n-modal">
+    <div v-show="visiable" class="n-modal" ref="nModal">
       <div class="mask" @click="hide"></div>
       <div class="modal-content shadow">
         <i class="el-icon-close" @click="hide"></i>
@@ -29,7 +29,10 @@ export default {
   watch: {
     visiable(val) {
       if (val === false) {
+        this.$refs.nModal.style.overflow = "initial";
         this.$emit("close");
+      } else {
+        this.$refs.nModal.style.overflow = "hidden";
       }
     }
   },
@@ -54,7 +57,6 @@ export default {
   top: 0;
   margin: auto;
   z-index: 9999;
-  overflow: hidden;
   .mask {
     position: absolute;
     width: 100%;

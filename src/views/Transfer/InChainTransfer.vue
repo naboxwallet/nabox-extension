@@ -104,6 +104,8 @@ import nerve from "nerve-sdk-js";
 import sdk from "nerve-sdk-js/lib/api/sdk";
 import utils from "nuls-sdk-js/lib/utils/utils";
 import { NTransfer, ETransfer, validateAddress } from "@/utils/api";
+import { getContractCallData } from "@/utils/nulsContractValidate";
+
 export default {
   data() {
     const validateTo = (rule, value, callback) => {
@@ -320,22 +322,46 @@ export default {
           // nuls 合约资产  普通token转账、向合约地址转token
           this.nulsType = "tokenTransfer";
           this.type = 16;
-          this.transferTransfer();
+          this.validataContract("transfer");
+          // this.transferTransfer();
         } else {
           // nuls 本链资产 普通nuls转账 向合约地址转nuls
           this.nulsType = "nulsTransfer";
           const toType = nerve.verifyAddress(this.transferModal.to);
-          if (toType.type === 2) {
+          if (toType.type === 2) { // 合约地址
             //向合约地址转nuls
             this.nulsType = "nulsToContract";
             this.type = 16;
-            this.transferPayable();
+            this.validataContract("_payable");
+            // this.transferPayable();
           } else {
             this.type = 2;
             this.nulsType = "nulsTransfer";
             this.fee = 0.001;
           }
         }
+      }
+    },
+    async validataContract(method) {
+      const res = await getContractCallData(
+        this.transferModal.from,
+        this.transferModal.to,
+        this.transferModal.price,
+        this.chooseAsset.contractAddress,
+        method,
+        this.transferModal.amount,
+        this.chooseAsset.decimals
+      );
+      if (res.success) {
+        this.fee = res.data.fee;
+        this.transferModal.gas = res.data.gas;
+        this.contractCallData = res.data.contractCallData;
+      } else {
+        this.$message({
+          message: res.msg,
+          type: "error",
+          duration: 3000
+        });
       }
     },
     //nuls token交易
@@ -587,10 +613,17 @@ export default {
     },
     //广播交易
     async broadcastTx(txHex) {
+      const assetInfo = this.chooseAsset.contractAddress
+        ? { contractAddress: this.chooseAsset.contractAddress }
+        : {
+            chainId: this.chooseAsset.chainId,
+            assetId: this.chooseAsset.assetId
+          };
       const params = {
         chain: this.chain,
         address: this.transferModal.from,
-        txHex
+        txHex,
+        ...assetInfo
       };
       const res = await this.$request({
         url: "/tx/transfer",
