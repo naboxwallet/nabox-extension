@@ -157,10 +157,12 @@ const cn = {
     transfer19: "快",
     transfer20: "自定义",
     transfer21: "手续费不足",
-    transfer22: "ERC20资产需先授权，才可跨链转入NerveNetwork",
+    transfer22: "token资产需先授权，才可跨链转入NerveNetwork",
     transfer23: "点击授权",
     transfer24: "该资产无法跨链到",
     transfer25: "授权成功，请稍后刷新重试",
+    transfer26: "该两个网络之间的交易暂不支持",
+    transfer27: "未查询到转账资产信息，请在插件中手动添加或稍后重试",
   },
   transferConfirm: {
     transferConfirm1: "转账确认",
@@ -200,6 +202,7 @@ const cn = {
     authorization2: "该网站将获得以下权限",
     authorization3: "读取账户信息",
     authorization4: "确认授权",
+    authorization5: "请选择需要连接的网络",
   },
   statusType: {
     1: "已确认",

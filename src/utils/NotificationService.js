@@ -29,6 +29,7 @@ export default class NotificationService {
       chrome.windows.onRemoved.addListener(function(windowId) {
         if (windowId === newWindow.id) {
           notification.responder(false);
+          // window.notification = null;
           return false;
         }
       });

@@ -56,7 +56,7 @@ export function getAesPri_PubByPri(password, pri) {
  * @param network beta/main
  */
 function getAddress(type = "password", pri, pub, network = "beta") {
-  let NULS, NERVE, Ethereum, BSC;
+  let NULS, NERVE, Ethereum;
   const nPub = type === "password" ? pub : null;
   const config = JSON.parse(sessionStorage.getItem("config"));
   if (!config.beta || !config.main) {
@@ -75,14 +75,15 @@ function getAddress(type = "password", pri, pub, network = "beta") {
     nPub,
     configInfo.NERVE.prefix
   );
-  Ethereum = BSC = ethers.utils.computeAddress(
+  Ethereum = ethers.utils.computeAddress(
     ethers.utils.hexZeroPad(ethers.utils.hexStripZeros("0x" + pub), 33)
   );
   return {
     NULS,
     NERVE,
     Ethereum,
-    BSC
+    BSC: Ethereum,
+    Heco: Ethereum
   };
 }
 
@@ -363,7 +364,8 @@ export class NTransfer {
           chain: this.chain,
           address: info.from,
           chainId: info.assetsChainId,
-          assetId: info.assetsId
+          assetId: info.assetsId,
+          refresh: true,
         }
       });
       if (res.code === 1000) {
@@ -406,10 +408,16 @@ export class NTransfer {
   }
 }
 
-const BNB_RPC_URL = {
-  ropsten: "https://data-seed-prebsc-1-s1.binance.org:8545/",
-  homestead: "https://bsc-dataseed.binance.org/"
-};
+const RPC_URL = {
+  BSC: {
+    ropsten: "https://data-seed-prebsc-1-s1.binance.org:8545/",
+    homestead: "https://bsc-dataseed.binance.org/"
+  },
+  Heco: {
+    ropsten: "https://http-testnet.hecochain.com",
+    homestead: "https://http-mainnet.hecochain.com"
+  }
+}
 
 const CROSS_OUT_ABI = [
   "function crossOut(string to, uint256 amount, address ERC20) public payable returns (bool)"
@@ -424,7 +432,7 @@ export class ETransfer {
     if (!props.chain) {
       throw "未获取到网络，组装交易失败";
     }
-    const validChains = ["Ethereum", "BSC"];
+    const validChains = ["Ethereum", "BSC", "Heco"];
     const validNetwork = ["beta", "main"];
     if (validChains.indexOf(props.chain) === -1) {
       throw "invalid chain";
@@ -441,8 +449,26 @@ export class ETransfer {
     if (chain === "Ethereum") {
       return ethers.getDefaultProvider(ETHNET);
     } else {
-      return new ethers.providers.JsonRpcProvider(BNB_RPC_URL[ETHNET]);
+      return new ethers.providers.JsonRpcProvider(RPC_URL[chain][ETHNET]);
     }
+  }
+  decodeData(data) {
+    const iface = new ethers.utils.Interface(["function transfer(address recipient, uint256 amount)"]);
+    const txInfo = iface.parseTransaction({ data });
+    //const decode = iface.functions["transfer(address,uint256)"].decode(data);
+    // const decode = iface.decodeFunctionData("transfer(address,uint)", data);
+    if (txInfo) {
+      console.log(txInfo, "info")
+      return {
+        to: txInfo.args[0],
+        amount: txInfo.args[1].toString()
+      };
+    }
+    return null;
+  }
+  formatEther(value) {
+    console.log(ethers.utils.parseEther('1'), 45)
+    return ethers.utils.formatEther(value);
   }
 
   async sendTransaction(params) {

@@ -51,17 +51,17 @@ export default new Vuex.Store({
       // console.log(new Date().getTime(), "999" - 1);
       commit("setAccount", account);
 
-      const naboxBridge = await getStorage("naboxBridge", {});
-      naboxBridge.currentAccount = currentAccount;
-      ExtensionPlatform.set({ naboxBridge });
+      const nabox = await getStorage("nabox", {});
+      nabox.currentAccount = currentAccount;
+      ExtensionPlatform.set({ nabox });
     },
     async setNetwork({ commit }, network) {
       // console.log(5566)
       await ExtensionPlatform.set({ network });
       commit("setNetwork", network);
-      const naboxBridge = await getStorage("naboxBridge", {});
-      naboxBridge.network = network;
-      ExtensionPlatform.set({ naboxBridge });
+      const nabox = await getStorage("nabox", {});
+      nabox.network = network;
+      ExtensionPlatform.set({ nabox });
     }
   },
   modules: {}

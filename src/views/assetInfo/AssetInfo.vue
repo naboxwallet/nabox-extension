@@ -72,7 +72,7 @@ export default {
   mounted() {},
 
   methods: {
-    async getAssetDetail() {
+    async getAssetDetail(refresh = false) {
       const {
         chain,
         address,
@@ -85,7 +85,7 @@ export default {
         : { chainId, assetId };
       const res = await this.$request({
         url: "/wallet/address/asset",
-        data: { chain, address, ...params }
+        data: { chain, address, refresh, ...params }
       });
       if (res.code === 1000) {
         res.data.total = divisionDecimals(res.data.total, res.data.decimals);

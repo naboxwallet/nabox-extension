@@ -14,6 +14,13 @@ const config = {
       prefix: "TNVT",
       symbol: "NVT",
       decimal: 8
+    },
+    chainInfo: {
+      NULS: 2,
+      NERVE: 5,
+      Ethereum: "0x3",
+      BSC: "0x61",
+      Heco: "0x100"
     }
   },
   main: {
@@ -31,6 +38,13 @@ const config = {
       prefix: "NERVE",
       symbol: "NVT",
       decimal: 8
+    },
+    chainInfo: {
+      NULS: 1,
+      NERVE: 9,
+      Ethereum: "0x1",
+      BSC: "0x38",
+      Heco: "0x80"
     }
   }
 };

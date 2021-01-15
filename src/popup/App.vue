@@ -22,10 +22,9 @@ export default {
   },
   async mounted() {
     // await ExtensionPlatform.clear(); //清除本地数据
-    // await ExtensionPlatform.remove("naboxBridge");
-    // await ExtensionPlatform.remove("allowSites");
+    // await ExtensionPlatform.remove("nabox");
     var a = await ExtensionPlatform.get();
-    console.log(a, 55);
+    console.log(a, "===---=storage=---===");
     const accountList = await getStorage("accountList", []);
     const network = await getStorage("network", "main");
     console.log(accountList, network, "app-mounted");

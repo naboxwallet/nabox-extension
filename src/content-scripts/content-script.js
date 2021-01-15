@@ -9,7 +9,9 @@ chrome.storage
 */
 
 import { getStorage, getSelectedAccount } from "@/utils/util";
-
+import { isEqual } from "lodash";
+import { config } from "@/config";
+console.log("load--------------")
 const INJECTION_SCRIPT_FILENAME = "js/inPage.js"
 
 function strippedFavicon() {
@@ -56,9 +58,6 @@ class Content {
   }
 
   async injectInteractionScript() {
-    // 注入naboxBridge到页面
-    // this.injectState();
-
     // 监听inPage发来的消息
     this.addListenerFromInPage();
 
@@ -67,23 +66,11 @@ class Content {
   }
 
   async injectState() {
-    const defaultAccount = await getSelectedAccount();
-    const defaultNetwork = await getStorage("network", []);
-    const naboxBridge = await getStorage("naboxBridge", {});
-    let selectedAccount = null;
-    if (naboxBridge.allowSites && naboxBridge.allowSites.length) {
-      const authorized = naboxBridge.allowSites.filter(site => site === location.origin)[0]
-      if (authorized) {
-        selectedAccount = defaultAccount;
-      }
-    }
+    const payload = await this.getAccountChainId()
     window.postMessage({
       type: "injectState",
       status: true,
-      payload: {
-        accounts: selectedAccount,
-        chainId: defaultNetwork
-      }
+      payload
     });
   }
 
@@ -99,9 +86,17 @@ class Content {
         this.injectState();
       } else {
         // 提供的api
-        const methods = ["createSession", "getBalance"]
+        const methods = [
+          "createSession",
+          "getBalance",
+          "sendTransaction",
+          "sendCrossTransaction",
+          "signTransaction",
+          "signCrossTransaction"
+        ]
         const msg = {
           type: data.method,
+          data: data.data,
           url: targetOrigin,
         }
         if (data.method === "createSession") {
@@ -115,114 +110,86 @@ class Content {
           })
         }
       }
-      
-      /* if (data.method === "connect") {
-        chrome.runtime.sendMessage({
-          type: "connect",
-          url: targetOrigin
-        }, (response) => {
-          e.source.postMessage(response)
-        })
-      } else if (data.method === "getBalance") {
-        chrome.runtime.sendMessage({
-          type: "getBalance",
-        })
-      } else if (data.method === "injectState") {
-        const accountList = await this.getStorage("accountList", []);
-        const defaultAccount = accountList.filter(account => account.selection)[0]
-        const defaultNetwork = await this.getStorage("network", []);
-        const naboxBridge = await this.getStorage("naboxBridge", {});
-        let betaAccount = null, mainAccount = null, network = "";
-        if (naboxBridge.allowSites && naboxBridge.allowSites.length) {
-          const authorized = naboxBridge.allowSites.filter(site => {
-            site.origin === e.source && site.status;
-          })[0]
-          if (authorized) {
-            betaAccount = defaultAccount.beta;
-            mainAccount = defaultAccount.main;
-            network = defaultNetwork
-          }
-        }
-        e.source.postMessage({
-          type: "injectState", 
-          selectedAccount: {
-            beta: betaAccount,
-            main: mainAccount,
-          },
-          network
-        })
-      } */
     });
   }
 
   listenStorageChange() {
     //监听授权网址、网络、选中账户变化
     chrome.storage.onChanged.addListener(async (changes, namespace) => {
-      if (!changes.naboxBridge) return;
-      const newValue = changes.naboxBridge.newValue || {};
-      const oldValue = changes.naboxBridge.oldValue || {};
-
-      this.checkConnected(newValue.allowSites, oldValue.allowSites);
-
-      this.checkCurrentAccount(newValue.currentAccount, oldValue.currentAccount);
-
-      this.checkNetwork(newValue.network, oldValue.network);
+      if (!changes.nabox) return;
+      const newValue = changes.nabox.newValue || {};
+      const oldValue = changes.nabox.oldValue || {};
+      if (!isEqual(newValue.allowSites, oldValue.allowSites)) {
+        this.checkConnected(newValue.allowSites, oldValue.allowSites);
+      } else if (!isEqual(newValue.currentAccount, oldValue.currentAccount)) {
+        this.checkCurrentAccount(newValue.currentAccount, oldValue.currentAccount);
+      } else if (!isEqual(newValue.network, oldValue.network)) {
+        this.checkNetwork(newValue.network, oldValue.network);
+      }
     })
   }
 
   async checkConnected(newSites = [], oldSites = []) {
-    if (newSites.length !== oldSites.length) {
-      // 连接网站修改
-      const authorizedNow = newSites.filter(site => {
-        return site === location.origin;
-      })[0];
-      const authorizedBefore = oldSites.filter(site => {
-        return site === location.origin;
-      })[0];
-      if (authorizedNow) {
-        if (authorizedNow !== authorizedBefore) {
-          const defaultAccount = await getSelectedAccount();
-          const network = await getStorage("network", "")
-          window.postMessage({
-            type: "connect",
-            payload: {
-              accounts: authorizedNow ? defaultAccount : null,
-              chainId: network
-            }
-          }, location.origin);
-        }
-      } else {
+    // 连接网站修改
+    const authorizedNow = newSites.filter(site => {
+      return site.origin === location.origin;
+    })[0];
+    const authorizedBefore = oldSites.filter(site => {
+      return site.origin === location.origin;
+    })[0];
+    if (authorizedNow) {
+      if (authorizedNow !== authorizedBefore) {
+        const payload = await this.getAccountChainId()
         window.postMessage({
-          type: "disconnect"
+          type: "connect",
+          payload
         }, location.origin);
       }
-      
+    } else {
+      window.postMessage({
+        type: "disconnect",
+        payload: {}
+      }, location.origin);
     }
   }
   async checkCurrentAccount(newAccount = {}, oldAccount = {}) {
+    console.log(newAccount, "===", oldAccount)
     if (newAccount.pub !== oldAccount.pub) {
-      const defaultAccount = await getSelectedAccount();
-      const network = await getStorage("network", "")
+      const payload = await this.getAccountChainId()
       window.postMessage({
         type: "session_update",
-        payload: {
-          accounts: defaultAccount,
-          chainId: network
-        }
+        payload
       }, location.origin);
     }
   }
 
   async checkNetwork(newNetwork, oldNetwork) {
     if (newNetwork !== oldNetwork) {
-      const defaultAccount = await getSelectedAccount();
+      const payload = await this.getAccountChainId()
       window.postMessage({
         type: "session_update",
-        payload: {
-          accounts: defaultAccount,
-          chainId: newNetwork
-        }
+        payload
       }, location.origin);
+    }
+  }
+
+  async getAccountChainId() {
+    const defaultAccount = await getSelectedAccount();
+    const network = await getStorage("network", "");
+    const nabox = await getStorage("nabox", {});
+    const sites = nabox.allowSites || [];
+    const authorizedSite = sites.filter(site => {
+      return site.origin === location.origin;
+    })[0];
+    const accounts = authorizedSite
+      ? [defaultAccount[network][authorizedSite.chain]]
+      : [];
+    const chainId = authorizedSite
+      ? config[network].chainInfo[authorizedSite.chain]
+      : config[network].chainInfo.NULS;
+    return {
+      accounts,
+      chainId
     }
   }
 }

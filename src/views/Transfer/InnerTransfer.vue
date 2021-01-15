@@ -1,12 +1,9 @@
 <template>
-  <div class="inner-transfer" v-loading="transferLoading">
+  <div class="inner-transfer transfer-page" v-loading="transferLoading">
     <transition name="fade-transform" mode="out-in">
       <div v-show="!showConfirm">
         <common-head>
           {{ $t("innerTransfer.innerTransfer1") }}
-          <template v-slot:right>
-            <i class="el-icon-document" v-show="false"></i>
-          </template>
         </common-head>
         <div class="tips">Tips: {{ $t("innerTransfer.innerTransfer2") }}</div>
         <div class="transfer-wrap">
@@ -16,7 +13,7 @@
               <img src="../../assets/img/split-line.png" alt="" />
               <span>{{ $t("innerTransfer.innerTransfer4") }}</span>
             </div>
-            <div class="content">
+            <div class="account-content">
               <div class="from">
                 <el-select v-model="fromNetwork">
                   <el-option
@@ -63,9 +60,9 @@
             </span>
             <el-form-item :label="$t('public.amount')" prop="amount">
               <el-input v-model="transferModal.amount">
-                <el-button slot="append">
+                <!-- <el-button slot="append">
                   {{ $t("public.all") }}
-                </el-button>
+                </el-button> -->
               </el-input>
             </el-form-item>
             <p class="approve-tip" v-if="isCrossIn && needAllowance">
@@ -89,7 +86,7 @@
               >
               </el-input>
             </el-form-item>
-            <div class="fee">
+            <div class="fee-wrap">
               <p class="fee-label">{{ $t("public.fee") }}</p>
               <!-- eth 《----》 bnb -->
               <template v-if="isWithdrawal && isCrossIn">
@@ -166,7 +163,7 @@
 <script>
 import CommonHead from "@/components/CommonHead";
 import TransferConfirm from "@/components/TransferConfirm";
-import { superLong, divisionDecimals, timesDecimals, Plus, getSymbolUSD, Minus, checkBalance } from "@/utils/util";
+import { superLong, divisionDecimals, timesDecimals, Plus, getSymbolUSD, Minus, checkBalance, chainToSymbol } from "@/utils/util";
 import { NTransfer, ETransfer, crossFee } from "@/utils/api";
 import { getContractCallData } from "@/utils/nulsContractValidate";
 export default {
@@ -206,12 +203,7 @@ export default {
       }
     };
     this.normalFee = 0.001;
-    this.chainToSymbol = {
-      Ethereum: "ETH",
-      BSC: "BNB",
-      NERVE: "NVT",
-      NULS: "NULS"
-    };
+    this.chainToSymbol = chainToSymbol;
     return {
       account: {},
       networkList: [],
@@ -292,7 +284,8 @@ export default {
       deep: true,
       handler() {
         this.getHeterogeneousChain();
-        if (this.fromNetwork !== "NULS" && this.fromNetwork !== "NERVE") {
+        this.changeSpeedUpFee(this.speedUpFee);
+        if (this.isCrossIn) {
           this.getERC20Allowance();
         }
       }
@@ -364,20 +357,6 @@ export default {
           fee = this.fee + this.chainToSymbol.NULS;
         }
       }
-      /* if (this.isWithdrawal) {
-        const normalFee = this.fee + this.chainToSymbol[this.fromNetwork];
-        fee = this.extraFee
-          ? normalFee + "+" + this.extraFee + this.chainToSymbol.NERVE
-          : normalFee;
-      } else if (this.isCrossIn) {
-        const crossInFee = this.fee + this.chainToSymbol[this.fromNetwork]
-        fee =
-          this.toNetwork === "NULS"
-            ? crossInFee + "+" + nerveToNulsFee
-            : crossInFee;
-      } else {
-        fee = this.toNetwork === "NULS" ? nerveToNulsFee : crossFee + "NULS";
-      } */
       return {
         from: superLong(this.fromAddress, 12),
         to: superLong(this.toAddress, 12),
@@ -403,7 +382,7 @@ export default {
   mounted() {
     this.account = { ...this.$store.getters.currentAccount[this.network] };
     const account = { ...this.$store.getters.currentAccount[this.network] };
-    const sortOrder = ["NULS", "NERVE", "Ethereum", "BSC"];
+    const sortOrder = ["NULS", "NERVE", "Ethereum", "BSC", "Heco"];
     function indexOf(item) {
       return sortOrder.indexOf(item);
     }
@@ -436,7 +415,7 @@ export default {
         res.data.map(v => {
           v.balance = divisionDecimals(v.balance, v.decimals);
           v.ids = this.getKey(v);
-          if (v.heterogeneousList && v.heterogeneousList.length) {
+          /* if (v.heterogeneousList && v.heterogeneousList.length) {
             const symbolToChain = {
               ETH: "Ethereum",
               BNB: "BSC",
@@ -445,7 +424,7 @@ export default {
             v.heterogeneousList.map(item => {
               item.network = symbolToChain[item];
             });
-          }
+          } */
         });
         const defaultAsset = res.data[0];
         this.chooseAsset = defaultAsset;
@@ -521,9 +500,11 @@ export default {
     // 充值、提现加速
     async changeSpeedUpFee(e) {
       if (this.isWithdrawal) {
+        //计算提现手续费
         this.calculateFee();
       }
       if (this.isCrossIn) {
+        // 计算充值手续费
         if (e) {
           this.getSpeedUpFee();
         } else {
@@ -560,15 +541,13 @@ export default {
       } = this.heterogeneousChain_In;
       console.log(this.heterogeneousChain_In, "异构转入链info")
       this.refreshAllowance = true;
-      this.needAllowance = true;
+      this.needAllowance = false;
       if (token) {
         this.needAllowance = await this.crossInTransfer.getERC20Allowance(
           contractAddress,
           heterogeneousChainMultySignAddress,
           this.fromAddress
         );
-      } else {
-        this.needAllowance = false;
       }
       this.refreshAllowance = false;
     },
@@ -950,13 +929,6 @@ export default {
 </script>
 <style lang="less">
 .inner-transfer {
-  font-size: 12px;
-  height: 100%;
-  .el-icon-document {
-    position: absolute;
-    right: 22px;
-    top: 25px;
-  }
   .tips {
     padding: 15px 25px;
     color: #c38455;
@@ -981,7 +953,7 @@ export default {
           height: 20px;
         }
       }
-      .content {
+      .account-content {
         flex: 1;
       }
       .el-select {
@@ -1021,56 +993,6 @@ export default {
           color: #53b8a9;
         }
       }
-    }
-    .approve-tip {
-      .el-button {
-        padding: 0;
-        font-size: 12px;
-        border: none;
-      }
-    }
-    .fee {
-      display: block;
-      .fee-label {
-        color: #a5abb2;
-        margin-bottom: 2px;
-      }
-      .custom-wrap {
-        display: flex;
-        align-items: center;
-        .fee-number {
-          margin: 0 5px;
-        }
-      }
-      .el-button {
-        font-size: 12px;
-      }
-      .el-radio-group {
-        .el-radio-button {
-          margin-right: 0;
-        }
-        .el-radio-button__inner {
-          padding: 2px 10px;
-          border-radius: 0;
-        }
-      }
-      .custom-input {
-        width: 45%;
-        input {
-          height: 32px;
-          line-height: 32px;
-        }
-        .el-input-group__append {
-          font-size: 12px;
-        }
-      }
-      .el-button--text {
-        padding: 0;
-      }
-    }
-    .btn {
-      width: 100%;
-      margin: 20px 0;
     }
   }
 }

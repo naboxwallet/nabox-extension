@@ -87,6 +87,16 @@ const routes = [
     component: () => import("../views/notification/Authorization.vue")
   },
   {
+    path: "/notification/send-transaction",
+    name: "NotificationSendTransaction",
+    component: () => import("../views/notification/SendTransaction.vue")
+  },
+  {
+    path: "/notification/send-cross-transaction",
+    name: "NotificationSendCrossTransaction",
+    component: () => import("../views/notification/SendCrossTransaction.vue")
+  },
+  {
     path: "/about",
     name: "About",
     // route level code-splitting

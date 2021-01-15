@@ -77,6 +77,8 @@ import ETH from "../../assets/img/ETH.png";
 import ETHActive from "../../assets/img/ETH-active.png";
 import BNB from "../../assets/img/BNB.png";
 import BNBActive from "../../assets/img/BNB-active.png";
+import Heco from "../../assets/img/Heco.png";
+import HecoActive from "../../assets/img/Heco-active.png";
 import AssetsList from "@/components/AssetsList";
 import TxList from "@/components/TxList";
 export default {
@@ -101,7 +103,13 @@ export default {
           src: ETH,
           activeSrc: ETHActive
         },
-        { chain: "BSC", background: "#e7ba41", src: BNB, activeSrc: BNBActive }
+        { chain: "BSC", background: "#e7ba41", src: BNB, activeSrc: BNBActive },
+        {
+          chain: "Heco",
+          background: "#26356c",
+          src: Heco,
+          activeSrc: HecoActive
+        },
       ],
       cardBackground: "#53b8a9",
       activeTab: "first"

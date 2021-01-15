@@ -193,6 +193,10 @@ export function getOrigin(chain, network) {
       beta: "https://testnet.bscscan.com",
       main: "https://bscscan.com",
     },
+    Heco: {
+      beta: "https://scan-testnet.hecochain.com",
+      main: "https://scan.hecochain.com",
+    },
   }
   return origins[chain][network];
 }
@@ -226,6 +230,7 @@ export async function checkBalance(fee) {
   const symbolToChain = {
     ETH: "Ethereum",
     BNB: "BSC",
+    HT: "Heco",
     NVT: "NERVE",
     NULS: "NULS"
   }
@@ -234,19 +239,23 @@ export async function checkBalance(fee) {
   const currentAccount = accountList.filter(account => account.selection)[0];
   const network = await getStorage("network");
   const config = JSON.parse(sessionStorage.getItem("config"));
-  Object.keys(symbolToChain).map(symbol => {
-    symbolArr.map(async fee => {
+  const chains = Object.keys(symbolToChain);
+  for (let i = 0; i < chains.length; i++) {
+    const symbol = chains[i];
+    for (let j = 0; j < symbolArr.length; j++) {
+      const fee = symbolArr[j];
       if (fee.indexOf(symbol) > -1) {
         const chain = symbolToChain[symbol];
         const address = currentAccount[network][chain];
         const {chainId, assetId} = config[network][chain];
         const balance = await getBalance(chain, address, chainId, assetId)
+        // console.log(balance, 665544, fee.split(symbol)[0], chain)
         if (balance - fee.split(symbol)[0] < 0) {
           enough = false;
         }
       }
-    });
-  });
+    }
+  }
   return enough;
 }
 
@@ -255,7 +264,7 @@ async function getBalance(chain, address, chainId, assetId) {
   try {
     const res = await request({
       url: "/wallet/address/asset",
-      data: { chain, address, chainId, assetId }
+      data: { chain, address, chainId, assetId, refresh: true }
     });
     if (res.code === 1000) {
       balance = divisionDecimals(res.data.balance, res.data.decimals);
@@ -264,21 +273,10 @@ async function getBalance(chain, address, chainId, assetId) {
   return balance;
 }
 
-export async function checkNvtBalance(fee) {
-  const accountList = await getStorage("accountList", []);
-  const currentAccount = accountList.filter(account => account.selection)[0];
-  const network = await getStorage("network");
-  const config = JSON.parse(sessionStorage.getItem("config"));
-  const address = currentAccount[network].NERVE;
-  const {chainId, assetId} = config[network].NERVE;
-
-  const res = await this.$request({
-    url: "/wallet/address/asset",
-    data: { chain: "NERVE", address, chainId, assetId }
-  });
-  let balance = 0;
-  if (res.code === 1000) {
-    balance = divisionDecimals(res.data.balance, res.data.decimals);
-  }
-  return balance - fee > 0 ? true : false;
+export const chainToSymbol = {
+  NULS: "NULS",
+  NERVE: "NVT",
+  Ethereum: "ETH",
+  BSC: "BNB",
+  Heco: "HT"
 }

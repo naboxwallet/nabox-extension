@@ -15,6 +15,14 @@
     <div class="select-account">
       <h3 class="tc">{{ $t("authorization.authorization1") }}</h3>
     </div>
+    <div class="network-list">
+      <h3>{{ $t("authorization.authorization5") }}</h3>
+      <el-radio-group v-model="network">
+        <el-radio :key="item" :label="item" v-for="item in networkList">
+          {{ item }}
+        </el-radio>
+      </el-radio-group>
+    </div>
     <div class="btn-wrap">
       <el-button @click="reject">{{ $t("public.cancel") }}</el-button>
       <el-button type="primary" @click="connect">
@@ -30,7 +38,8 @@ export default {
   data() {
     return {
       notification: {},
-      accountList: []
+      networkList: ["NULS", "NERVE", "Ethereum", "BSC", "Heco"],
+      network: "NULS",
     };
   },
 
@@ -55,7 +64,7 @@ export default {
       this.close();
     },
     async connect() {
-      this.notification.responder(true);
+      this.notification.responder(this.network);
       this.close();
     }
   }
@@ -94,9 +103,19 @@ export default {
       font-style: normal;
     }
   }
-  h3 {
-    margin-bottom: 20px;
+  .select-account h3 {
+    margin-bottom: 10px;
     font-size: 14px;
+  }
+  .network-list {
+    margin-left: 30px;
+    h3 {
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .el-radio {
+      display: block;
+    }
   }
   .btn-wrap {
     text-align: center;

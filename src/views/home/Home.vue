@@ -29,12 +29,12 @@
       class="app-modal"
     >
       <div class="sites-wrap">
-        <div class="site-item" v-for="site in allowSites" :key="site">
+        <div class="site-item" v-for="site in allowSites" :key="site.origin">
           <div class="left">
             <span class="circle"></span>
-            <p class="site-name">{{ site }}</p>
+            <p class="site-name">{{ site.origin }}</p>
           </div>
-          <span class="operate" @click="updateSites(site)">
+          <span class="operate" @click="updateSites(site.origin)">
             {{ $t("home.home14") }}
           </span>
         </div>
@@ -174,8 +174,8 @@ export default {
     },
     async showAppModal() {
       this.appModal = true;
-      const naboxBridge = await getStorage("naboxBridge", {});
-      this.allowSites = naboxBridge.allowSites || [];
+      const nabox = await getStorage("nabox", {});
+      this.allowSites = nabox.allowSites || [];
       chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         console.log(tabs, 12345)
         if (tabs.length && tabs[0].url) {
@@ -185,7 +185,8 @@ export default {
             domain: origin,
             icon: tabs[0].favIconUrl
           };
-          this.showManualConnect = this.allowSites.indexOf(origin) === -1;
+          const exist = this.allowSites.filter(v => v.origin === origin)[0]
+          this.showManualConnect = exist ? false : true;
         }
       });
     },
@@ -197,11 +198,16 @@ export default {
     },
     // 断开已连接网站
     async updateSites(site) {
-      const naboxBridge = await getStorage("naboxBridge", {});
-      const index = this.allowSites.indexOf(site);
+      const nabox = await getStorage("nabox", {});
+      let index = 0;
+      this.allowSites.map((v, i) => {
+        if (v.origin === site) {
+          index = i;
+        }
+      })
       this.allowSites.splice(index, 1);
-      naboxBridge.allowSites = this.allowSites;
-      ExtensionPlatform.set({ naboxBridge });
+      nabox.allowSites = this.allowSites;
+      ExtensionPlatform.set({ nabox });
       this.appModal = false;
     },
     showQrcode() {

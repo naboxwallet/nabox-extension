@@ -8,7 +8,8 @@ const addListenerFromContent = () => {
       for (let i = 0; i < resolvers.length; i++) {
         if (resolvers[i].type === event.data.type) {
           if (!event.data.status) {
-            resolvers[i].reject("User rejected the request");
+            resolvers[i].reject(event.data.payload);
+            //"User rejected the request"
           } else {
             resolvers[i].resolve(event.data.payload);
           }
@@ -34,7 +35,7 @@ const injectExtensionState = () => {
   return send("injectState");
 };
 
-class NaboxBridge extends EventEmitter {
+class Nabox extends EventEmitter {
   constructor() {
     super();
     addListenerFromContent();
@@ -44,7 +45,7 @@ class NaboxBridge extends EventEmitter {
     injectExtensionState().then(res => {
       this.chainId = res.chainId;
       this.accounts = res.accounts;
-      this.connected = res.accounts ? true : false;
+      this.connected = res.accounts.length ? true : false;
     });
   }
 
@@ -57,6 +58,75 @@ class NaboxBridge extends EventEmitter {
       // console.log(accounts, "==accounts==");
       this.accounts = accounts;
       return accounts;
+    });
+  }
+  /**
+   * @desc 发送转账交易
+   * @param {object} tx
+   * @param {string} tx.from
+   * @param {string} tx.to
+   * @param {?string} tx.data
+   * @param {string} tx.value
+   * @param {?string} tx.assetChainId 转账资产链ID
+   * @param {?string} tx.assetId 转账资产ID
+   * @param {?string} tx.contractAddress 转账资产智能合约地址
+   */
+  sendTransaction(tx) {
+    return send("sendTransaction", tx).then(res => {
+      return res;
+    });
+  }
+
+  /**
+   * @desc 发送跨链转账交易
+   * @param {object} tx
+   * @param {string} tx.from
+   * @param {string} tx.to
+   * @param {?string} tx.data
+   * @param {string} tx.value
+   * @param {?string} tx.assetChainId 转账资产链ID
+   * @param {?string} tx.assetId 转账资产ID
+   * @param {?string} tx.contractAddress 转账资产智能合约地址
+   * @param {"NULS"|"NERVE"|"BSC"|"Ethereum" | "Heco"} tx.toChain 转账资产智能合约地址
+   */
+  sendCrossTransaction(tx) {
+    return send("sendCrossTransaction", tx).then(res => {
+      return res;
+    });
+  }
+
+  /**
+   * @desc 交易签名
+   * @param {object} tx
+   * @param {string} tx.from
+   * @param {string} tx.to
+   * @param {?string} tx.data
+   * @param {string} tx.value
+   * @param {?string} tx.assetChainId 转账资产链ID
+   * @param {?string} tx.assetId 转账资产ID
+   * @param {?string} tx.contractAddress 转账资产智能合约地址
+   */
+  signTransaction(tx) {
+    return send("signTransaction", { sign: true, ...tx }).then(res => {
+      return res;
+    });
+  }
+
+  /**
+   * @desc 跨链转账交易签名
+   * @param {object} tx
+   * @param {string} tx.from
+   * @param {string} tx.to
+   * @param {?string} tx.data
+   * @param {string} tx.value
+   * @param {?string} tx.assetChainId 转账资产链ID
+   * @param {?string} tx.assetId 转账资产ID
+   * @param {?string} tx.contractAddress 转账资产智能合约地址
+   * @param {"NULS"|"NERVE"|"BSC"|"Ethereum" | "Heco"} tx.toChain 转账资产智能合约地址
+   */
+  signCrossTransaction(tx) {
+    return send("signTransaction", { sign: true, ...tx }).then(res => {
+      return res;
     });
   }
 
@@ -74,7 +144,7 @@ class NaboxBridge extends EventEmitter {
 
 class Inject {
   constructor() {
-    window.naboxBridge = new NaboxBridge();
+    window.nabox = new Nabox();
     //监听授权网址、网络、选中账户变化
     window.addEventListener("message", event => {
       if (event.origin === location.origin) {
@@ -93,9 +163,9 @@ class Inject {
       }
     });
 
-    /* window.naboxBridge.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
-    window.naboxBridge.on("session_update", (error, res)=>{console.log(error, res, "----session_update----")})
-    window.naboxBridge.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")}) */
+    window.nabox.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
+    window.nabox.on("session_update", (error, res)=>{console.log(error, res, "----session_update----")})
+    window.nabox.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")})
   }
   emitEvent(type, data) {
     // console.log(type, 6666)
@@ -103,12 +173,12 @@ class Inject {
     switch (type) {
       case "connect":
       case "session_update":
-        window.naboxBridge.accounts = data.accounts;
-        window.naboxBridge.chainId = data.chainId;
+        window.nabox.accounts = data.accounts;
+        window.nabox.chainId = data.chainId;
         break;
       case "disconnect":
-        window.naboxBridge.connected = false;
-        window.naboxBridge.accounts = null;
+        window.nabox.connected = false;
+        window.nabox.accounts = null;
       /* case "changeAllowSites":
       case "accountsChanged":
         property = "selectedAccount";
@@ -117,15 +187,15 @@ class Inject {
         property = "network";
         break;
       case "disconnect":
-        window.naboxBridge.connected = false;
-        window.naboxBridge.selectedAccount = null;
-        window.naboxBridge.emit("disconnect", false);
+        window.nabox.connected = false;
+        window.nabox.selectedAccount = null;
+        window.nabox.emit("disconnect", false);
         return; */
     }
     /* console.log(444);
-    window.naboxBridge[property] = data;
-    window.naboxBridge.emit(type, data); */
-    window.naboxBridge.emit(type, "", { params: [data] });
+    window.nabox[property] = data;
+    window.nabox.emit(type, data); */
+    window.nabox.emit(type, "", { params: [data] });
   }
 }
 new Inject();

@@ -13,6 +13,14 @@
     <div class="select-account">
       <h3 class="tc">{{ $t("authorization.authorization1") }}</h3>
     </div>
+    <div class="network-list">
+      <h3>{{ $t("authorization.authorization5") }}</h3>
+      <el-radio-group v-model="network">
+        <el-radio :key="item" :label="item" v-for="item in networkList">
+          {{ item }}
+        </el-radio>
+      </el-radio-group>
+    </div>
     <div class="btn-wrap">
       <el-button @click="reject">{{ $t("public.cancel") }}</el-button>
       <el-button type="primary" @click="connect">
@@ -28,7 +36,9 @@ import ExtensionPlatform from "@/utils/extension";
 export default {
   data() {
     return {
-      siteInfo: this.$route.query
+      siteInfo: this.$route.query,
+      networkList: ["NULS", "NERVE", "Ethereum", "BSC", "Heco"],
+      network: "NULS",
     };
   },
 
@@ -51,11 +61,14 @@ export default {
       this.close();
     },
     async connect() {
-      const naboxBridge = await getStorage("naboxBridge", {});
-      const allowSites = naboxBridge.allowSites;
-      allowSites.push(this.siteInfo.domain);
-      naboxBridge.allowSites = allowSites;
-      await ExtensionPlatform.set({ naboxBridge });
+      const nabox = await getStorage("nabox", {});
+      const allowSites = nabox.allowSites;
+      allowSites.push({
+        origin: this.siteInfo.domain,
+        chain: this.network
+      });
+      nabox.allowSites = allowSites;
+      await ExtensionPlatform.set({ nabox });
       this.close();
     }
   }
@@ -94,9 +107,19 @@ export default {
       font-style: normal;
     }
   }
-  h3 {
-    margin-bottom: 20px;
+  .select-account h3 {
+    margin-bottom: 10px;
     font-size: 14px;
+  }
+  .network-list {
+    margin-left: 30px;
+    h3 {
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .el-radio {
+      display: block;
+    }
   }
   .btn-wrap {
     text-align: center;

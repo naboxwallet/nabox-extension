@@ -1,6 +1,7 @@
 import ExtensionPlatform from "@/utils/extension";
 import NotificationService from "@/utils/NotificationService";
 import { getStorage, getSelectedAccount } from "@/utils/util";
+import { config } from "./config";
 
 class Prompt {
   constructor(routePath = "", domain = "", data = {}, responder = null) {
@@ -12,7 +13,9 @@ class Prompt {
 }
 
 const typeToPath = {
-  createSession: "/notification/authorization"
+  createSession: "/notification/authorization",
+  sendTransaction: "/notification/send-transaction",
+  sendCrossTransaction: "/notification/send-cross-transaction"
 };
 
 class Background {
@@ -22,37 +25,30 @@ class Background {
 
   addListener() {
     // 监听content发来的消息，处理后再返回给content
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      const { type, url, icon } = request;
-      if (type === "injectState") {
-        // this.injectState(type, url, sendResponse);
-      } else if (type === "createSession") {
-        this.createSession(type, url, icon, sendResponse);
+    chrome.runtime.onMessage.addListener(
+      async (request, sender, sendResponse) => {
+        const { type, url, icon, data } = request;
+        if (type === "createSession") {
+          this.createSession(type, url, icon, sendResponse);
+        } else {
+          const isAuthorized = await this.isAuthorized(url);
+          console.log(isAuthorized, 55, type)
+          if (isAuthorized) {
+            if (type === "sendTransaction" || type === "signTransaction") {
+              this.sendTransaction(type, url, data, sendResponse);
+            } else if (type === "sendCrossTransaction" || type === "signCrossTransaction") {
+              this.sendCrossTransaction(type, url, data, sendResponse);
+            }
+          } else {
+            sendResponse({
+              type,
+              status: false,
+              payload: "Please connect the plugin first"
+            });
+          }
+        }
       }
-    });
-  }
-
-  async injectState(type, domain, sendResponse) {
-    const defaultAccount = await getSelectedAccount();
-    const defaultNetwork = await getStorage("network", "");
-    const naboxBridge = await getStorage("naboxBridge", {});
-    let selectedAccount = null;
-    if (naboxBridge.allowSites && naboxBridge.allowSites.length) {
-      const authorized = naboxBridge.allowSites.filter(
-        site => site.origin === domain
-      )[0];
-      if (authorized) {
-        selectedAccount = defaultAccount;
-      }
-    }
-    sendResponse({
-      type,
-      status: true,
-      payload: {
-        selectedAccount,
-        network: defaultNetwork
-      }
-    });
+    );
   }
 
   async createSession(type, domain, icon, sendResponse) {
@@ -66,19 +62,16 @@ class Background {
       });
       return;
     }
-    const naboxBridge = await getStorage("naboxBridge", {}); //(await ExtensionPlatform.get("naboxBridge")).naboxBridge || {};
-    const allowSites = naboxBridge.allowSites || [];
+    const nabox = await getStorage("nabox", {}); //(await ExtensionPlatform.get("nabox")).nabox || {};
+    const allowSites = nabox.allowSites || [];
     const Authorized = allowSites.filter(site => {
-      return site === domain;
+      return site.origin === domain;
     })[0];
     if (Authorized) {
       //已经授权过直接返回之前数据
       sendResponse({
         type,
-        payload: {
-          accounts: defaultAccount,
-          chainId: defaultNetwork
-        },
+        payload: [defaultAccount[defaultNetwork][Authorized.chain]],
         status: true
       });
     } else {
@@ -90,23 +83,119 @@ class Background {
             sendResponse({
               type,
               status: true,
-              payload: {
-                accounts: defaultAccount,
-                chainId: defaultNetwork
-              }
+              payload: [defaultAccount[defaultNetwork][approved]]
             });
-            allowSites.push(domain);
-            naboxBridge.allowSites = allowSites;
-            ExtensionPlatform.set({ naboxBridge });
+            allowSites.push({
+              origin: domain,
+              chain: approved
+            });
+            nabox.allowSites = allowSites;
+            ExtensionPlatform.set({ nabox });
           } else {
             sendResponse({
               type,
-              status: false
+              status: false,
+              payload: "User rejected the request"
             });
           }
         })
       );
     }
+  }
+  async sendTransaction(type, domain, data, sendResponse) {
+    NotificationService.open(
+      new Prompt(typeToPath[type], domain, data, res => {
+        if (res) {
+          if (res.success) {
+            sendResponse({
+              type,
+              status: true,
+              payload: res.data
+            });
+          } else {
+            sendResponse({
+              type,
+              status: false,
+              payload: res.data
+            });
+          }
+        } else {
+          sendResponse({
+            type,
+            status: false,
+            payload: "User rejected the request"
+          });
+        }
+      })
+    );
+  }
+  async sendCrossTransaction(type, domain, data, sendResponse) {
+    const isValidCrossChain = await this.isValidCrossChain(data.toChain, domain);
+    if (isValidCrossChain) {
+      NotificationService.open(
+        new Prompt(typeToPath[type], domain, data, res => {
+          if (res) {
+            if (res.success) {
+              sendResponse({
+                type,
+                status: true,
+                payload: res.data
+              });
+            } else {
+              sendResponse({
+                type,
+                status: false,
+                payload: res.data
+              });
+            }
+          } else {
+            sendResponse({
+              type,
+              status: false,
+              payload: "User rejected the request"
+            });
+          }
+        })
+      );
+    } else {
+      sendResponse({
+        type,
+        status: false,
+        payload: "Unsupported cross-chain transactions"
+      });
+    }
+  }
+  // 验证是否已连接插件
+  async isAuthorized(domain) {
+    const nabox = await getStorage("nabox", {});
+    const allowSites = nabox.allowSites || [];
+    const Authorized = allowSites.filter(site => {
+      return site.origin === domain;
+    })[0];
+    return Authorized;
+  }
+  // 验证跨链网络是否支持
+  async isValidCrossChain(toChain, domain) {
+    if (toChain) {
+      // eth 跨链转入nerve 参数中的data解析？？
+      const validCrossChain = [
+        "NULS-NERVE",
+        "NERVE-NULS",
+        "NERVE-Ethereum",
+        "NERVE-BSC",
+        "NERVE-Heco",
+        /* "Ethereum-NERVE",
+        "BSC-NERVE",
+        "Heco-NERVE" */
+      ];
+      const fromChain = (await this.isAuthorized(domain)).chain;
+      const chain = fromChain + "-" + toChain;
+      if (validCrossChain.indexOf(chain) > -1) {
+        return true;
+      }
+      return false;
+    }
+    return false;
   }
 }
 

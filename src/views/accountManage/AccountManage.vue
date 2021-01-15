@@ -15,13 +15,13 @@
           <i class="el-icon-close" @click="editName = false"></i>
         </template>
       </div>
-      <div class="content-item">
+      <!-- <div class="content-item">
         <div>
           <img src="../../assets/img/keystore.svg" alt="" />
           <span>{{ $t("accountManage.accountManage2") }}</span>
         </div>
         <i class="el-icon-arrow-right"></i>
-      </div>
+      </div> -->
       <div class="content-item" @click="showBackup = true">
         <div>
           <img src="../../assets/img/pri.svg" alt="" />

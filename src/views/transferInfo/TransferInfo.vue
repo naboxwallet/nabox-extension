@@ -207,7 +207,7 @@ export default {
     line-height: 1.2;
     font-size: 12px;
     label {
-      width: 60px;
+      width: 70px;
       color: #a5abb2;
       font-size: 12px;
     }
@@ -248,7 +248,7 @@ export default {
       font-size: 12px;
       align-items: center;
       span {
-        width: 60px;
+        width: 70px;
         color: #6d757c;
       }
       p {

@@ -32,13 +32,13 @@
             </span>
             <el-form-item :label="$t('public.amount')" prop="amount">
               <el-input v-model="transferModal.amount">
-                <el-button slot="append">
+                <!-- <el-button slot="append">
                   {{ $t("public.all") }}
-                </el-button>
+                </el-button> -->
               </el-input>
             </el-form-item>
             <el-switch
-              v-show="chooseAsset.contractAddress"
+              v-show="chooseAsset.contractAddress && chain === 'NULS'"
               v-model="seniorValue"
               :inactive-text="$t('transfer.transfer9')"
               :width="32"
@@ -65,12 +65,12 @@
               >
               </el-input>
             </el-form-item>
-            <div class="fee">
-              <label>{{ $t("public.fee") }}</label>
+            <div class="fee-wrap">
+              <p class="fee-label">{{ $t("public.fee") }}</p>
               <span v-if="!feeLoading">{{ fee }}{{ feeSymbol }}</span>
               <img v-else src="../../assets/img/loading.svg" />
               <el-checkbox
-                v-if="chain === 'Ethereum' || chain === 'BSC'"
+                v-if="chain !== 'NULS' && chain !== 'NERVE'"
                 v-model="speedUpFee"
                 @change="changeSpeedUpFee"
               >
@@ -99,7 +99,7 @@
 <script>
 import CommonHead from "@/components/CommonHead";
 import TransferConfirm from "@/components/TransferConfirm";
-import { superLong, timesDecimals, Plus, Division, Times, divisionDecimals } from "@/utils/util";
+import { superLong, timesDecimals, Plus, Division, Times, divisionDecimals, chainToSymbol } from "@/utils/util";
 import nerve from "nerve-sdk-js";
 import sdk from "nerve-sdk-js/lib/api/sdk";
 import utils from "nuls-sdk-js/lib/utils/utils";
@@ -112,7 +112,7 @@ export default {
       //console.log(this.changeAssetInfo);
       if (value === "") {
         callback(new Error(this.$t("transfer.transfer1")));
-      } else if (this.chain === "Ethereum" || this.chain === "BSC") {
+      } else if (this.chain !== "NULS" && this.chain !== "NERVE") {
         const correct = validateAddress(value);
         if (correct) {
           callback();
@@ -231,15 +231,9 @@ export default {
     const config = JSON.parse(sessionStorage.getItem("config"));
     this.MAIN_INFO = config[this.$store.state.network][this.chain];
     console.log(this.MAIN_INFO, 999)
-    const feeSymbol = {
-      NULS: "NULS",
-      NERVE: "NVT",
-      Ethereum: "ETH",
-      BSC: "BNB"
-    };
-    this.feeSymbol = feeSymbol[this.chain];
+    this.feeSymbol = chainToSymbol[this.chain];
     this.getAssetsList();
-    if (this.chain === "Ethereum" || this.chain === "BSC") {
+    if (this.chain !== "NULS" && this.chain !== "NERVE") {
       this.eTransfer = new ETransfer({
         chain: this.chain,
         network: this.$store.state.network
@@ -291,6 +285,9 @@ export default {
     changeType(item) {
       this.chooseAsset = this.assetsList.filter(v => item === v.ids)[0]; //选择的转账资产
       this.validateParameter();
+      if (this.chain !== "NULS" && this.chain !== "NERVE") {
+        this.changeSpeedUpFee(this.speedUpFee);
+      }
     },
     async getGasPrice() {
       this.feeLoading = true;
@@ -635,8 +632,11 @@ export default {
         this.$message({
           type: "success",
           message: this.$t("transfer.transfer13"),
-          duration: 3000
+          duration: 2000
         });
+        setTimeout(() => {
+          this.$router.push("/");
+        }, 1500);
       } else {
         this.$message({
           type: "error",
@@ -675,16 +675,24 @@ export default {
 };
 </script>
 <style lang="less">
-.transfer-page {
+/* .transfer-page {
   height: 100%;
   overflow-y: auto;
+  font-size: 12px;
   // padding-bottom: 50px;
   .content {
     padding: 10px 25px 0;
+    .fee-wrap {
+      display: block;
+      .fee-label {
+        color: #a5abb2;
+        margin-bottom: 2px;
+      }
+    }
     .btn {
       width: 100%;
       margin-top: 20px;
     }
   }
-}
+} */
 </style>
