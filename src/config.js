@@ -1,6 +1,6 @@
 const config = {
   beta: {
-    BASE_URL: "http://192.168.1.7:8083/nabox-api",
+    BASE_URL: "http://192.168.1.140:19001/nabox-api",
     NULS: {
       chainId: 2,
       assetId: 1,
@@ -24,7 +24,7 @@ const config = {
     }
   },
   main: {
-    BASE_URL: "http://192.168.1.7:8083/nabox-api",
+    BASE_URL: "http://192.168.1.140:19001/nabox-api",
     NULS: {
       chainId: 1,
       assetId: 1,

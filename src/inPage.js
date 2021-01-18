@@ -163,9 +163,9 @@ class Inject {
       }
     });
 
-    window.nabox.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
+    /* window.nabox.on("connect", (error, res)=>{console.log(error, res, "----connect----")})
     window.nabox.on("session_update", (error, res)=>{console.log(error, res, "----session_update----")})
-    window.nabox.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")})
+    window.nabox.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")}) */
   }
   emitEvent(type, data) {
     // console.log(type, 6666)
