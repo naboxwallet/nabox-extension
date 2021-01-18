@@ -126,7 +126,7 @@ export default {
 
   methods: {
     toDetail(item) {
-      console.log(item)
+      console.log(item);
       this.$router.push({
         path: "/transfer-info",
         query: {

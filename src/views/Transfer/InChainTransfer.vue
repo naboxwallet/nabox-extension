@@ -15,7 +15,8 @@
               </el-input>
             </el-form-item>
             <el-form-item label="To" prop="to">
-              <el-input v-model.trim="transferModal.to"></el-input>
+              <el-input v-model.trim="transferModal.to">
+              </el-input>
             </el-form-item>
             <el-form-item :label="$t('public.symbol')">
               <el-select v-model="transferModal.symbol" @change="changeType">
@@ -24,7 +25,8 @@
                   :key="item.ids"
                   :label="item.symbol"
                   :value="item.ids"
-                ></el-option>
+                >
+                </el-option>
               </el-select>
             </el-form-item>
             <span class="available">
@@ -47,10 +49,12 @@
             </el-switch>
             <div v-show="seniorValue" class="senior_list cb">
               <el-form-item label="Gas Limit" prop="gas">
-                <el-input v-model="transferModal.gas"></el-input>
+                <el-input v-model="transferModal.gas">
+                </el-input>
               </el-form-item>
               <el-form-item label="Price" prop="price">
-                <el-input v-model="transferModal.price"></el-input>
+                <el-input v-model="transferModal.price">
+                </el-input>
               </el-form-item>
             </div>
             <el-form-item
@@ -92,7 +96,8 @@
       :data="confirmData"
       :visiable.sync="showConfirm"
       @confirm="submit"
-    ></transfer-confirm>
+    >
+    </transfer-confirm>
   </div>
 </template>
 

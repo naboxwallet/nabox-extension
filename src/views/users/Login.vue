@@ -9,7 +9,7 @@
       label-position="top"
     >
       <el-form-item :label="$t('login.login8')" prop="pri" v-if="importAddress">
-        <el-input v-model="newAddressForm.pri"></el-input>
+        <el-input type="textarea" v-model.trim="newAddressForm.pri"></el-input>
       </el-form-item>
       <el-form-item :label="$t('public.password')" prop="pass">
         <el-input type="password" v-model="newAddressForm.pass"></el-input>

@@ -113,9 +113,13 @@ export default {
       margin-bottom: 5px;
       font-size: 14px;
     }
-    .el-radio {
-      display: block;
+    .el-radio-group{
+      .el-radio {
+        display: block;
+        line-height: 1.8;
+      }
     }
+
   }
   .btn-wrap {
     text-align: center;
