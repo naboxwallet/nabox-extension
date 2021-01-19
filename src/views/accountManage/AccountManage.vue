@@ -45,6 +45,7 @@
         <i class="el-icon-arrow-right"></i>
       </div>
     </div>
+
     <Modal class="backup-address" @close="modalClose"
            :visiable.sync="showBackup"
            :title="$t('accountManage.accountManage3')">
@@ -67,27 +68,22 @@
         </el-button>
       </template>
     </Modal>
-    <Modal
-            :visiable.sync="showChangePass"
-            :title="$t('accountManage.accountManage4')"
-            class="change-password"
-            @close="modalClose"
-    >
-      <el-form
-              :model="changePsForm"
-              status-icon
-              :rules="changePsRuls"
-              ref="changePsForm"
-              label-position="top"
-      >
+
+    <Modal class="change-password" @close="modalClose"
+           :visiable.sync="showChangePass"
+           :title="$t('accountManage.accountManage4')">
+      <el-form status-icon :model="changePsForm" :rules="changePsRuls" ref="changePsForm" label-position="top">
         <el-form-item :label="$t('public.oldPassword')" prop="old">
-          <el-input type="password" v-model="changePsForm.old"></el-input>
+          <el-input type="password" v-model="changePsForm.old">
+          </el-input>
         </el-form-item>
         <el-form-item :label="$t('public.password')" prop="pass">
-          <el-input type="password" v-model="changePsForm.pass"></el-input>
+          <el-input type="password" v-model="changePsForm.pass">
+          </el-input>
         </el-form-item>
         <el-form-item :label="$t('public.checkPassword')" prop="checkPass">
-          <el-input type="password" v-model="changePsForm.checkPass"></el-input>
+          <el-input type="password" v-model="changePsForm.checkPass">
+          </el-input>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="submitForm('changePsForm')">
@@ -96,12 +92,10 @@
         </el-form-item>
       </el-form>
     </Modal>
-    <Modal
-            :visiable.sync="showRemoveAccount"
-            :title="$t('accountManage.accountManage5')"
-            class="remove-address"
-            @close="modalClose"
-    >
+
+    <Modal class="remove-address" @close="modalClose"
+           :visiable.sync="showRemoveAccount"
+           :title="$t('accountManage.accountManage5')">
       <template v-if="!confirm">
         <p class="tip">
           <i class="el-icon-warning"></i>
@@ -118,7 +112,8 @@
       </template>
       <template v-else>
         <p class="tip">{{ $t("accountManage.accountManage7") }}</p>
-        <el-input v-model="password" type="password"></el-input>
+        <el-input v-model="password" type="password">
+        </el-input>
         <div class="btn-wrap">
           <el-button @click="showRemoveAccount = false">
             {{ $t("public.cancel") }}
@@ -129,6 +124,7 @@
         </div>
       </template>
     </Modal>
+
   </div>
 </template>
 
@@ -227,6 +223,7 @@
         }
         this.editName = false;
       },
+
       async backupPri() {
         const correct = await checkPassword(this.password);
         if (correct) {
@@ -240,6 +237,7 @@
           });
         }
       },
+
       copy() {
         copys(this.pri);
         this.$message({
@@ -249,6 +247,7 @@
         });
         this.showBackup = false;
       },
+
       submitForm(formName) {
         this.$refs[formName].validate(async valid => {
           if (valid) {
@@ -278,6 +277,7 @@
           }
         });
       },
+
       async removeAccount() {
         this.loading = true;
         const accountList = [...this.accountList];
@@ -295,6 +295,7 @@
         const path = newAccount.length ? "/" : "/new-address";
         this.$router.push(path);
       },
+
       modalClose() {
         this.password = "";
         this.changePsForm.old = "";

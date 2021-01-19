@@ -49,4 +49,6 @@ const config = {
   }
 };
 
-export { config };
+const runEnvironment = 'beta';//运行环境 main:正式环境 beta:测试环境
+
+export {config, runEnvironment};

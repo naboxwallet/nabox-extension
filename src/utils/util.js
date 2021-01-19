@@ -3,6 +3,7 @@ import copy from "copy-to-clipboard";
 import ExtensionPlatform from "./extension";
 import sdk from "nerve-sdk-js/lib/api/sdk";
 import {request} from "./request";
+import {runEnvironment} from "@/config";
 
 var CryptoJS = require("crypto-js");
 
@@ -208,6 +209,7 @@ export function getOrigin(chain, network) {
 }
 
 export async function getStorage(key, defaultValue) {
+  console.log(key, defaultValue);
   return (await ExtensionPlatform.get(key))[key] || defaultValue;
 }
 
@@ -243,9 +245,7 @@ export async function checkBalance(fee) {
   let enough = true;
   const accountList = await getStorage("accountList", []);
   const currentAccount = accountList.filter(account => account.selection)[0];
-  console.log(currentAccount);
-  const network = await getStorage("network");
-  console.log(network);
+  const network = await getStorage("network", runEnvironment);
   const config = JSON.parse(sessionStorage.getItem("config"));
   const chains = Object.keys(symbolToChain);
   for (let i = 0; i < chains.length; i++) {

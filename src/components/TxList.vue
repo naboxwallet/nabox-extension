@@ -1,10 +1,6 @@
 <template>
   <div class="tx-list">
-    <ul
-      class="list"
-      v-infinite-scroll="load"
-      infinite-scroll-disabled="disabled"
-    >
+    <ul class="list" v-infinite-scroll="load" infinite-scroll-disabled="disabled">
       <li v-for="item in list" :key="item.id" @click="handleClick(item)">
         <div class="top clear">
           <span class="asset-symbol">{{ item.symbol }}</span>
@@ -33,101 +29,101 @@
 </template>
 
 <script>
-import { superLong } from "@/utils/util";
+  import {superLong} from "@/utils/util";
 
-export default {
-  props: {
-    list: {
-      type: Array,
-      default: () => []
+  export default {
+    props: {
+      list: {
+        type: Array,
+        default: () => []
+      },
+      loading: {
+        type: Boolean,
+        default: true
+      },
+      total: [String, Number]
     },
-    loading: {
-      type: Boolean,
-      default: true
+    computed: {
+      noMore() {
+        return this.list.length && this.list.length >= this.total;
+      },
+      disabled() {
+        return this.loading || this.noMore;
+      }
     },
-    total: [String, Number]
-  },
-  computed: {
-    noMore() {
-      return this.list.length && this.list.length >= this.total;
-    },
-    disabled() {
-      return this.loading || this.noMore;
-    }
-  },
-  methods: {
-    superLong(str, len = 5) {
-      return superLong(str, len);
-    },
-    handleClick(item) {
-      this.$emit("toDetail", item);
-    },
-    load() {
-      this.$emit("loadMoreTx");
+    methods: {
+      superLong(str, len = 5) {
+        return superLong(str, len);
+      },
+      handleClick(item) {
+        this.$emit("toDetail", item);
+      },
+      load() {
+        this.$emit("loadMoreTx");
+      }
     }
   }
-}
 
 </script>
 <style lang="less" scoped>
-.tx-list {
-  overflow: auto;
-  height: 100%;
-  li {
-    height: 74px;
-    padding: 12px 0;
-    cursor: pointer;
-    border-bottom: 1px solid #e9ebf3;
-    &:hover {
-      background-color: #f2f3f4;
-    }
-    &:last-child {
-      border-bottom: none;
-    }
-    .top {
-      .asset-symbol {
-        color: #3a3c44;
-        margin-right: 10px;
+  .tx-list {
+    overflow: auto;
+    height: 100%;
+    li {
+      height: 74px;
+      padding: 12px 0;
+      cursor: pointer;
+      border-bottom: 1px solid #e9ebf3;
+      &:hover {
+        background-color: #f2f3f4;
       }
-      .time {
-        color: #6d757c;
-        font-size: 12px;
+      &:last-child {
+        border-bottom: none;
       }
-      i {
-        color: #bac0d3;
-        font-size: 20px;
-        font-weight: 600;
-      }
-    }
-    .bottom {
-      // display: flex;
-      overflow: hidden;
-      div {
-        margin-right: 5px;
-        font-size: 12px;
-        float: left;
-        &:last-child {
-          // flex: 1;
-          float: right;
-          font-size: 14px;
-          line-height: 14px;
-          color: #fd775a;
-          text-align: right;
+      .top {
+        .asset-symbol {
+          color: #3a3c44;
+          margin-right: 10px;
         }
-        &.up {
-          color: #53b8a9;
+        .time {
+          color: #6d757c;
+          font-size: 12px;
+        }
+        i {
+          color: #bac0d3;
+          font-size: 20px;
+          font-weight: 600;
         }
       }
-      p {
-        color: #a5abb2;
-        height: 15px;
+      .bottom {
+        // display: flex;
+        overflow: hidden;
+        div {
+          margin-right: 5px;
+          font-size: 12px;
+          float: left;
+          &:last-child {
+            // flex: 1;
+            float: right;
+            font-size: 14px;
+            line-height: 14px;
+            color: #fd775a;
+            text-align: right;
+          }
+          &.up {
+            color: #53b8a9;
+          }
+        }
+        p {
+          color: #a5abb2;
+          height: 15px;
+        }
       }
     }
+    .load-tip {
+      color: #53b8a9;
+      font-size: 12px;
+      text-align: center;
+    }
   }
-  .load-tip {
-    color: #53b8a9;
-    font-size: 12px;
-    text-align: center;
-  }
-}
 </style>
