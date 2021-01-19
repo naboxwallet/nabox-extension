@@ -2,18 +2,13 @@
   <div class="home-assets">
     <div class="left">
       <ul>
-        <!-- <li class="nuls"><img src="../../assets/img/NULS.png" alt="" /></li>
-        <li class="nerve"><img src="../../assets/img/Nerve.png" alt="" /></li>
-        <li class="eth"><img src="../../assets/img/ETH.png" alt="" /></li>
-        <li class="bnb"><img src="../../assets/img/BNB.png" alt="" /></li> -->
         <li v-for="item in assets" :key="item.chain">
           <img v-show="chain === item.chain" :src="item.activeSrc"/>
-          <img
-                  v-show="chain !== item.chain"
-                  :src="item.src"
-                  v-hover="item.activeSrc"
-                  :data-src="item.src"
-                  @click="handleChange(item.chain, item.background)"
+          <img v-show="chain !== item.chain"
+               :src="item.src"
+               v-hover="item.activeSrc"
+               :data-src="item.src"
+               @click="handleChange(item.chain, item.background)"
           />
         </li>
       </ul>
@@ -88,31 +83,11 @@
     data() {
       return {
         assets: [
-          {
-            chain: "NULS",
-            background: "#53b8a9",
-            src: NULS,
-            activeSrc: NULSActive
-          },
-          {
-            chain: "NERVE",
-            background: "#5270b5",
-            src: Nerve,
-            activeSrc: NerveActive
-          },
-          {
-            chain: "Ethereum",
-            background: "#292e39",
-            src: ETH,
-            activeSrc: ETHActive
-          },
+          {chain: "Ethereum", background: "#292e39", src: ETH, activeSrc: ETHActive},
           {chain: "BSC", background: "#e7ba41", src: BNB, activeSrc: BNBActive},
-          {
-            chain: "Heco",
-            background: "#26356c",
-            src: Heco,
-            activeSrc: HecoActive
-          },
+          {chain: "Heco", background: "#26356c", src: Heco, activeSrc: HecoActive},
+          {chain: "NULS", background: "#53b8a9", src: NULS, activeSrc: NULSActive},
+          {chain: "NERVE", background: "#5270b5", src: Nerve, activeSrc: NerveActive},
         ],
         cardBackground: "#53b8a9",
         activeTab: "first"

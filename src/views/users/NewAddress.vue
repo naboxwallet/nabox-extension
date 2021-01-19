@@ -7,14 +7,16 @@
       <el-tabs v-model="activeName">
         <el-tab-pane :label="$t('public.create')" name="create">
           <label class="label">{{ $t("login.login10") }}</label>
-          <el-input v-model="accoutName"></el-input>
+          <el-input v-model="accoutName">
+          </el-input>
           <el-button type="primary" @click="submitCreate">
             {{ $t("public.create") }}
           </el-button>
         </el-tab-pane>
         <el-tab-pane :label="$t('public.import')" name="import">
           <label class="label">{{ $t("login.login8") }}</label>
-          <el-input type="textarea" v-model.trim="pri"></el-input>
+          <el-input type="textarea" v-model.trim="pri">
+          </el-input>
           <div class="tip" v-show="priError">
             {{ priError }}
           </div>
@@ -127,7 +129,13 @@
           }
           await this.$store.dispatch("setAccount", accountList);
           this.loading = false;
-          this.$router.push("/");
+          //console.log(this.activeName);
+          if (this.activeName === 'create') {
+            this.$router.push("/account-manage");
+          } else {
+            this.$router.push("/");
+          }
+
         }
       },
 

@@ -20,7 +20,7 @@
           <img src="../../assets/img/tx-record.svg" alt="" />
           <p>{{ $t("home.home3") }}</p>
         </li> -->
-        <li>
+        <li @click="$emit('show-asset-modal')">
           <!-- @click="$emit('show-asset-modal') -->
           <img src="../../assets/img/overview.svg" alt="" />
           <p>{{ $t("home.home4") }}</p>
