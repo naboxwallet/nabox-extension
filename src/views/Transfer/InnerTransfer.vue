@@ -747,7 +747,9 @@
           if (valid) {
             this.transferLoading = true;
             this.loadingText = '交易组装中...';
+            console.log(this.confirmData.fee);
             const enoughFee = await checkBalance(this.confirmData.fee);
+            console.log(enoughFee);
             if (enoughFee) {
               this.transferLoading = false;
               this.showConfirm = true;
@@ -771,9 +773,9 @@
         this.loadingText = '交易广播中...';
         const fromNetwork = this.fromNetwork;
         const toNetwork = this.toNetwork;
-        let hex1 = "",
-          hex2 = "";
+        let hex1 = "", hex2 = "";
         try {
+          //console.log(fromNetwork, toNetwork);
           if (fromNetwork === "NULS") {
             hex1 = await this.getNerveNulsHex("NULS"); // nuls 跨到nerve hex
             if (toNetwork !== "NERVE") {
@@ -782,6 +784,16 @@
           } else if (fromNetwork === "NERVE") {
             if (toNetwork === "NULS") {
               hex1 = await this.getNerveNulsHex("NERVE");
+              if (hex1.data && !hex1.success) {
+                this.$message({
+                  message: '获取改账户资产失败!(chainId:' + hex1.data.assetsChainId + ' assetsId:' + hex1.data.assetsId + ')',
+                  type: "error",
+                  duration: 3000
+                });
+                this.transferLoading = false;
+                return;
+              }
+              hex1 = hex1.data;
             } else {
               hex1 = await this.getWithdrawalHex();
             }
@@ -816,11 +828,7 @@
         const currentAccount = this.$store.getters.currentAccount[network];
         const to = chain === "NULS" ? "NERVE" : "NULS";
         const type = chain === "NERVE" ? 10 : this.chooseAsset.contractAddress ? 16 : 10;
-        const transfer = new NTransfer({
-          chain,
-          network,
-          type
-        });
+        const transfer = new NTransfer({chain, network, type});
         const transferInfo = {
           from: currentAccount[chain],
           to: currentAccount[to],
@@ -840,12 +848,17 @@
           txData = this.contractCallData;
         }
         const inputOuput = await transfer.inputsOrOutputs(transferInfo);
-        return await transfer.getTxHex({
+        if (inputOuput.data && !inputOuput.success) {
+          return {success: false, data: inputOuput.data};
+        }
+        let resData = await transfer.getTxHex({
           inputs: inputOuput.inputs,
           outputs: inputOuput.outputs,
           remarks: this.transferModal.remarks,
           txData
         });
+
+        return {success: true, data: resData}
       },
 
       async getWithdrawalHex() {

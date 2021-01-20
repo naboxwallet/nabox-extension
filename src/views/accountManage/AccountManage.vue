@@ -30,13 +30,13 @@
         </div>
         <i class="el-icon-arrow-right"></i>
       </div>
-      <div class="content-item" @click="showChangePass = true">
+      <!--<div class="content-item" @click="showChangePass = true">
         <div>
           <img src="../../assets/img/password.svg" alt=""/>
           <span>{{ $t("accountManage.accountManage4") }}</span>
         </div>
         <i class="el-icon-arrow-right"></i>
-      </div>
+      </div>-->
       <div v-if="accountList.length > 1" class="content-item" @click="showRemoveAccount = true">
         <div class="remove-account">
           <img src="../../assets/img/del.svg" alt=""/>
@@ -69,9 +69,7 @@
       </template>
     </Modal>
 
-    <Modal class="change-password" @close="modalClose"
-           :visiable.sync="showChangePass"
-           :title="$t('accountManage.accountManage4')">
+    <Modal class="change-password" @close="modalClose" :visiable.sync="showChangePass" :title="$t('accountManage.accountManage4')">
       <el-form status-icon :model="changePsForm" :rules="changePsRuls" ref="changePsForm" label-position="top">
         <el-form-item :label="$t('public.oldPassword')" prop="old">
           <el-input type="password" v-model="changePsForm.old">

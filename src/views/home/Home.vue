@@ -1,12 +1,14 @@
 <template>
   <div class="home">
     <Header :network="$store.state.network" @changeNetwork="changeNetwork"/>
+
     <Overview
             @show-app-modal="showAppModal"
             @show-asset-modal="showAssetModal"
             :accountName="chainAccount.name"
             :balance="chainAccount['balance_' + $store.state.network]"
     />
+
     <Assets
             @show-modal="showQrcode"
             :chain="chain"
@@ -22,6 +24,7 @@
             @toAddAsset="toAddAsset"
             @loadMoreTx="getTxList"
     />
+
     <!-- 已连接应用弹窗 -->
     <Modal :visiable.sync="appModal" :title="$t('home.home13')" class="app-modal">
       <div class="sites-wrap">
@@ -39,12 +42,9 @@
         </div>
       </div>
     </Modal>
+
     <!-- 资产总览弹窗 -->
-    <Modal
-            :visiable.sync="overviewModal"
-            class="overview-modal"
-            :title="$t('home.home12')"
-    >
+    <Modal class="overview-modal" :visiable.sync="overviewModal" :title="$t('home.home12')">
       <div class="content-head">
         <span>{{ $t("public.symbol") }}</span>
         <span>{{ $t("public.amount") }}</span>
@@ -58,12 +58,9 @@
         </div>
       </div>
     </Modal>
+
     <!-- 二维码弹窗 -->
-    <Modal
-            :visiable.sync="qrcodeModal"
-            class="qr-code-modal"
-            :title="chainAccount.name"
-    >
+    <Modal :visiable.sync="qrcodeModal" class="qr-code-modal" :title="chainAccount.name">
       <div id="qrcode" class="qrcode"></div>
       <p class="address">{{ address }}</p>
     </Modal>
@@ -212,6 +209,7 @@
           colorDark: "#000000",
           colorLight: "#ffffff"
         });
+        console.log(qrcode)
       },
 
       // 切换账户
@@ -241,7 +239,7 @@
       // 更新账户资产列表、交易列表
       async update(chain) {
         //this.assetsLoading = true;
-        this.txList = [];
+        //this.txList = [];
         this.pageNumber = 1;
         this.txTotal = 0;
         this.address = this.currentAccount[chain];
@@ -280,7 +278,7 @@
       },
 
       async getTxList() {
-        this.txLoading = true;
+        //this.txLoading = true;
         if ((this.pageNumber - 1) * this.pageSize > this.txTotal) {
           this.txLoading = false;
           return;
@@ -299,7 +297,8 @@
             v.createTime = formatTime(v.createTime * 1000);
             v.amount = divisionDecimals(v.amount, v.decimals);
           });
-          this.txList = this.txList.concat(...res.data.records);
+          //this.txList = this.txList.concat(...res.data.records);
+          this.txList = res.data.records;
           this.txTotal = res.data.total;
           this.txLoading = false;
         }

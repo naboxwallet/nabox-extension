@@ -68,7 +68,7 @@ import {
   //   TimelineItem,
   //   Link,
   //   Divider,
-  //   Image,
+     Image,
   //   Calendar,
   //   Backtop,
   //   PageHeader,
@@ -154,7 +154,7 @@ Vue.use(TabPane);
 // Vue.use(TimelineItem);
 // Vue.use(Link);
 // Vue.use(Divider);
-// Vue.use(Image);
+ Vue.use(Image);
 // Vue.use(Calendar);
 // Vue.use(Backtop);
 // Vue.use(PageHeader);
@@ -185,5 +185,5 @@ const i18n = new VueI18n({
   messages
 });
 // element插件的多语言切换
-locale.i18n((key, value) => i18n.t(key, value)); 
+locale.i18n((key, value) => i18n.t(key, value));
 export default i18n;

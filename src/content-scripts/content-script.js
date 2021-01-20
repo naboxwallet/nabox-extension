@@ -1,40 +1,31 @@
-/* eslint-disable prettier/prettier */
 //直接注入页面的JS,可以获得浏览器所访问的web页面的详细信息，并可以通过操作DOM对页面做出修改,
 //content-scripts和原始页面共享DOM，但是不共享JS，如要访问页面JS（例如某个JS变量），只能通过injected js来实现。
-/* 
-chrome.extension(getURL , inIncognitoContext , lastError , onRequest , sendRequest)
-chrome.i18n
-chrome.runtime(connect , getManifest , getURL , id , onConnect , onMessage , sendMessage)
-chrome.storage
-*/
+import {getStorage, getSelectedAccount} from "@/utils/util";
+import {isEqual} from "lodash";
+import {config} from "@/config";
 
-import { getStorage, getSelectedAccount } from "@/utils/util";
-import { isEqual } from "lodash";
-import { config } from "@/config";
-console.log("load--------------")
-const INJECTION_SCRIPT_FILENAME = "js/inPage.js"
+const INJECTION_SCRIPT_FILENAME = "js/inPage.js";
 
 function strippedFavicon() {
   let favicon = undefined;
   let nodeList = document.getElementsByTagName("link");
-  for (let i = 0; i < nodeList.length; i++){
-    if((nodeList[i].getAttribute("rel") == "icon")||(nodeList[i].getAttribute("rel") == "shortcut icon")){
+  for (let i = 0; i < nodeList.length; i++) {
+    if ((nodeList[i].getAttribute("rel") === "icon") || (nodeList[i].getAttribute("rel") === "shortcut icon")) {
       favicon = nodeList[i].getAttribute("href");
       break;
     }
   }
 
-  if(favicon && favicon.substring(0,1) === '/'){
+  if (favicon && favicon.substring(0, 1) === '/') {
     favicon = location.origin + favicon;
   }
   return favicon;
-};
-
+}
 
 class Content {
   constructor() {
     this.injectScript();
-    
+
     this.injectInteractionScript();
   }
 
@@ -52,7 +43,7 @@ class Content {
     const head = document.head || document.documentElement;
     const script = document.createElement("script");
     script.setAttribute("async", "false");
-    script.src = chrome.extension.getURL(INJECTION_SCRIPT_FILENAME)
+    script.src = chrome.extension.getURL(INJECTION_SCRIPT_FILENAME);
     head.insertBefore(script, head.children[0]);
     head.removeChild(script);
   }
@@ -66,7 +57,7 @@ class Content {
   }
 
   async injectState() {
-    const payload = await this.getAccountChainId()
+    const payload = await this.getAccountChainId();
     window.postMessage({
       type: "injectState",
       status: true,
@@ -75,7 +66,7 @@ class Content {
   }
 
   addListenerFromInPage() {
-    window.addEventListener("message", async (e) =>{
+    window.addEventListener("message", async (e) => {
       // console.log(e, '====e====')
       const targetOrigin = location.origin;
       if (e.source !== window) return;
@@ -93,14 +84,14 @@ class Content {
           "sendCrossTransaction",
           "signTransaction",
           "signCrossTransaction"
-        ]
+        ];
         const msg = {
           type: data.method,
           data: data.data,
           url: targetOrigin,
-        }
+        };
         if (data.method === "createSession") {
-          const icon = strippedFavicon()
+          const icon = strippedFavicon();
           msg.icon = icon
         }
         if (methods.indexOf(data.method) > -1) {
@@ -116,6 +107,7 @@ class Content {
   listenStorageChange() {
     //监听授权网址、网络、选中账户变化
     chrome.storage.onChanged.addListener(async (changes, namespace) => {
+      console.log(namespace);
       if (!changes.nabox) return;
       const newValue = changes.nabox.newValue || {};
       const oldValue = changes.nabox.oldValue || {};
@@ -139,7 +131,7 @@ class Content {
     })[0];
     if (authorizedNow) {
       if (authorizedNow !== authorizedBefore) {
-        const payload = await this.getAccountChainId()
+        const payload = await this.getAccountChainId();
         window.postMessage({
           type: "connect",
           payload
@@ -152,10 +144,11 @@ class Content {
       }, location.origin);
     }
   }
+
   async checkCurrentAccount(newAccount = {}, oldAccount = {}) {
-    console.log(newAccount, "===", oldAccount)
+    console.log(newAccount, "===", oldAccount);
     if (newAccount.pub !== oldAccount.pub) {
-      const payload = await this.getAccountChainId()
+      const payload = await this.getAccountChainId();
       window.postMessage({
         type: "session_update",
         payload
@@ -165,7 +158,7 @@ class Content {
 
   async checkNetwork(newNetwork, oldNetwork) {
     if (newNetwork !== oldNetwork) {
-      const payload = await this.getAccountChainId()
+      const payload = await this.getAccountChainId();
       window.postMessage({
         type: "session_update",
         payload
@@ -194,7 +187,7 @@ class Content {
   }
 }
 
-new Content()
+new Content();
 
 //与background建立长连接
 /* const port = chrome.runtime.connect({ name: "nabox_wallet_channel" });

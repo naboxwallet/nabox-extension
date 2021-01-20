@@ -4,12 +4,8 @@
       <ul>
         <li v-for="item in assets" :key="item.chain">
           <img v-show="chain === item.chain" :src="item.activeSrc"/>
-          <img v-show="chain !== item.chain"
-               :src="item.src"
-               v-hover="item.activeSrc"
-               :data-src="item.src"
-               @click="handleChange(item.chain, item.background)"
-          />
+          <img v-show="chain !== item.chain" :src="item.src" v-hover="item.activeSrc" :data-src="item.src"
+               @click="handleChange(item.chain, item.background)"/>
         </li>
       </ul>
     </div>
@@ -19,43 +15,25 @@
           <span>{{ superLong(accountInfo.address) }}</span>
           <span class="fr">
             <i class="iconfont icon-copy clicks" @click="copy(accountInfo.address)"></i>
-            <i
-                    class="iconfont icon-system-active clicks"
-                    @click="$emit('show-modal')"
-            ></i>
+            <i class="iconfont icon-system-active clicks" @click="$emit('show-modal')"></i>
           </span>
         </div>
-        <div class="asset">
-          {{ $t("home.home6") }}
-          <p>${{ accountInfo.total }}</p>
-        </div>
+        <div class="asset">{{ $t("home.home6") }}<p>${{ accountInfo.total }}</p></div>
         <div class="btn-wrap">
-          <span class="in-chain-transfer" @click="toTransfer(false)">
-            {{ $t("home.home7") }}
-          </span>
-          <span class="cross-chain-transfer" @click="toTransfer(true)">
-            {{ $t("home.home8") }}
-          </span>
+          <span class="in-chain-transfer" @click="toTransfer(false)">{{ $t("home.home7") }}</span>
+          <span class="cross-chain-transfer" @click="toTransfer(true)">{{ $t("home.home8") }}</span>
         </div>
       </div>
       <div class="assets-list">
         <i class="el-icon-circle-plus-outline" @click="toAddAsset"></i>
         <el-tabs v-model="activeTab">
           <el-tab-pane :label="$t('home.home9')" name="first">
-            <assets-list
-                    :list="accountInfo.assetsList"
-                    @toDetail="toAssetDetail"
-            >
+            <assets-list :list="accountInfo.assetsList" @toDetail="toAssetDetail">
             </assets-list>
           </el-tab-pane>
           <el-tab-pane :label="$t('home.home10')" name="second">
-            <tx-list
-                    :list="txList"
-                    @toDetail="toTxDetail"
-                    :total="txTotal"
-                    :loading="txLoading"
-                    @loadMoreTx="loadMoreTx"
-            >
+            <tx-list :list="txList" @toDetail="toTxDetail" :total="txTotal" :loading="txLoading"
+                     @loadMoreTx="loadMoreTx">
             </tx-list>
           </el-tab-pane>
         </el-tabs>

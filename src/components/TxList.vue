@@ -1,7 +1,7 @@
 <template>
   <div class="tx-list">
     <ul class="list" v-infinite-scroll="load" infinite-scroll-disabled="disabled">
-      <li v-for="item in list" :key="item.id" @click="handleClick(item)">
+      <li v-for="(item,index) in list" :key="index" @click="handleClick(item)">
         <div class="top clear">
           <span class="asset-symbol">{{ item.symbol }}</span>
           <span class="time">{{ item.createTime }}</span>

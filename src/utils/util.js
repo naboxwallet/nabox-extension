@@ -173,6 +173,7 @@ export function getPri(aesPri, password) {
   return sdk.decrypteOfAES(aesPri, password);
 }
 
+//验证密码
 export async function checkPassword(password) {
   const localPassword = (await ExtensionPlatform.get("password")).password;
   const encryptedPassword = encryptPassword(password);
@@ -257,7 +258,7 @@ export async function checkBalance(fee) {
         const address = currentAccount[network][chain];
         const {chainId, assetId} = config[network][chain];
         const balance = await getBalance(chain, address, chainId, assetId);
-        // console.log(balance, 665544, fee.split(symbol)[0], chain)
+        //console.log(balance, '----balance----', fee.split(symbol)[0], chain);
         if (balance - fee.split(symbol)[0] < 0) {
           enough = false;
         }
@@ -270,14 +271,13 @@ export async function checkBalance(fee) {
 async function getBalance(chain, address, chainId, assetId) {
   let balance = 0;
   try {
-    const res = await request({
-      url: "/wallet/address/asset",
-      data: {chain, address, chainId, assetId, refresh: true}
-    });
+    const res = await request({url: "/wallet/address/asset", data: {chain, address, chainId, assetId, refresh: true}});
+    //console.log(res);
     if (res.code === 1000) {
       balance = divisionDecimals(res.data.balance, res.data.decimals);
     }
   } catch (e) {
+    console.log(e)
   }
   return balance;
 }

@@ -4,18 +4,8 @@ import App from "./App.vue";
 import router from "../router";
 import store from "../store";
 import i18n from "../plugins/element";
-// import "../plugins/element";
-import ExtensionPlatform from "@/utils/extension";
-import { request } from "@/utils/request";
-import { getStorage } from "@/utils/util";
-/* import { isEqual } from "lodash";
-
-var object = [{ 'a': 2, b: 2 },{ b:2,'a': 1 }];
-var other = [{ 'a': 2, b: 2 },{ b:2,'a': 1 }];
- 
-console.log(isEqual(object, other), 665588);
-other[0].b=3
-console.log(isEqual(object, other), 665588); */
+import {getStorage} from "./../utils/util";
+import {request} from "./../utils/request";
 
 router.beforeEach(async (to, from, next) => {
   const accountList = await getStorage("accountList", []);
@@ -42,11 +32,7 @@ async function getConfig() {
       method: "get",
       network: "beta"
     });
-    /* const mainRes = await request({
-      url: "/api/chain/config",
-      network: "main"
-    }); */
-    console.log(betaRes, "==config==");
+    //console.log(betaRes, "==config==");
     let beta = {};
     if (betaRes.data && betaRes.data.length) {
       betaRes.data.map(v => {
@@ -62,7 +48,7 @@ async function getConfig() {
         }
       });
     }
-    const config = { beta, main: beta };
+    const config = {beta, main: beta};
     sessionStorage.setItem("config", JSON.stringify(config));
   } catch (e) {
     console.error(e, "获取链配置失败");
@@ -76,4 +62,5 @@ async function getConfig() {
     render: h => h(App)
   });
 }
+
 getConfig();
