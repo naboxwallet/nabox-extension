@@ -69,7 +69,8 @@
       </template>
     </Modal>
 
-    <Modal class="change-password" @close="modalClose" :visiable.sync="showChangePass" :title="$t('accountManage.accountManage4')">
+    <Modal class="change-password" @close="modalClose" :visiable.sync="showChangePass"
+           :title="$t('accountManage.accountManage4')">
       <el-form status-icon :model="changePsForm" :rules="changePsRuls" ref="changePsForm" label-position="top">
         <el-form-item :label="$t('public.oldPassword')" prop="old">
           <el-input type="password" v-model="changePsForm.old">
@@ -228,21 +229,13 @@
           this.pri = getPri(this.account.aesPri, this.password);
           this.confirm = true;
         } else {
-          this.$message({
-            message: this.$t("accountManage.accountManage8"),
-            type: "error",
-            duration: 2000
-          });
+          this.$message({message: this.$t("accountManage.accountManage8"), type: "error", duration: 2000});
         }
       },
 
       copy() {
         copys(this.pri);
-        this.$message({
-          message: this.$t("public.copySuccess"),
-          type: "success",
-          duration: 1000
-        });
+        this.$message({message: this.$t("public.copySuccess"), type: "success", duration: 1000});
         this.showBackup = false;
       },
 
@@ -253,21 +246,14 @@
             const accountList = [...this.accountList];
             accountList.map(item => {
               const pri = getPri(item.aesPri, this.changePsForm.old);
-              const {aesPri, pub} = getAesPri_PubByPri(
-                this.changePsForm.pass,
-                pri
-              );
+              const {aesPri, pub} = getAesPri_PubByPri(this.changePsForm.pass, pri);
               item.aesPri = aesPri;
               item.pub = pub;
             });
             await this.$store.dispatch("setAccount", accountList);
             const encryptedPassword = encryptPassword(this.changePsForm.pass);
             ExtensionPlatform.set({password: encryptedPassword});
-            this.$message({
-              message: this.$t("accountManage.accountManage6"),
-              type: "success",
-              duration: 1000
-            });
+            this.$message({message: this.$t("accountManage.accountManage6"), type: "success", duration: 1000});
             this.loading = false;
             this.showChangePass = false;
           } else {
@@ -284,11 +270,7 @@
           newAccount[0].selection = true;
         }
         await this.$store.dispatch("setAccount", newAccount);
-        this.$message({
-          message: this.$t("accountManage.accountManage10"),
-          type: "success",
-          duration: 1000
-        });
+        this.$message({message: this.$t("accountManage.accountManage10"), type: "success", duration: 1000});
         this.loading = false;
         const path = newAccount.length ? "/" : "/new-address";
         this.$router.push(path);
@@ -304,6 +286,7 @@
           this.confirm = false;
         }, 500);
       }
+
     }
   };
 </script>

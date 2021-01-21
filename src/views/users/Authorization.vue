@@ -3,7 +3,7 @@
   <div class="authorization">
     <div class="from-wrap">
       <div class="from-logo">
-        <img v-if="siteInfo.icon" :src="notification.icon" />
+        <img v-if="siteInfo.icon" :src="notification.icon"/>
         <i v-else>C</i>
       </div>
       <p class="from-origin">
@@ -31,109 +31,111 @@
 </template>
 
 <script>
-import { getStorage } from "@/utils/util";
-import ExtensionPlatform from "@/utils/extension";
-export default {
-  data() {
-    return {
-      siteInfo: this.$route.query,
-      networkList: ["NULS", "NERVE", "Ethereum", "BSC", "Heco"],
-      network: "NULS",
-    };
-  },
+  import {getStorage} from "@/utils/util";
+  import ExtensionPlatform from "@/utils/extension";
 
-  components: {},
-
-  watch: {},
-
-  computed: {},
-
-  created() {},
-
-  async mounted() {
-  },
-
-  methods: {
-    close() {
-      this.$router.go(-1);
+  export default {
+    data() {
+      return {
+        siteInfo: this.$route.query,
+        networkList: ["NULS", "NERVE", "Ethereum", "BSC", "Heco"],
+        network: "NULS",
+      };
     },
-    reject() {
-      this.close();
+
+    components: {},
+
+    watch: {},
+
+    computed: {},
+
+    created() {
     },
-    async connect() {
-      const nabox = await getStorage("nabox", {});
-      const allowSites = nabox.allowSites;
-      allowSites.push({
-        origin: this.siteInfo.domain,
-        chain: this.network
-      });
-      nabox.allowSites = allowSites;
-      await ExtensionPlatform.set({ nabox });
-      this.close();
+
+    async mounted() {
+    },
+
+    methods: {
+
+      close() {
+        this.$router.go(-1);
+      },
+
+      reject() {
+        this.close();
+      },
+
+      async connect() {
+        const nabox = await getStorage("nabox", {});
+        const allowSites = nabox.allowSites;
+        allowSites.push({origin: this.siteInfo.domain, chain: this.network});
+        nabox.allowSites = allowSites;
+        await ExtensionPlatform.set({nabox});
+        this.close();
+      }
     }
-  }
-};
+  };
 </script>
 <style lang="less">
-.authorization {
-  padding-top: 100px;
-  .from-wrap {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    .from-origin {
+  .authorization {
+    padding-top: 100px;
+    .from-wrap {
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      .from-origin {
+        font-size: 14px;
+        color: #6a737d;
+        margin: 20px 0 30px;
+        padding: 0 80px;
+        text-align: center;
+      }
+    }
+    .from-logo {
+      border-radius: 50%;
+      border: 1px solid #f2f3f4;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 64px;
+      height: 64px;
+      img {
+        width: 48px;
+        height: 48px;
+      }
+      i {
+        color: #000;
+        font-style: normal;
+      }
+    }
+    .select-account h3 {
+      margin-bottom: 10px;
       font-size: 14px;
-      color: #6a737d;
-      margin: 20px 0 30px;
-      padding: 0 80px;
+    }
+    .network-list {
+      margin-left: 30px;
+      h3 {
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      .el-radio {
+        display: block;
+      }
+    }
+    .btn-wrap {
       text-align: center;
-    }
-  }
-  .from-logo {
-    border-radius: 50%;
-    border: 1px solid #f2f3f4;
-    background: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 64px;
-    height: 64px;
-    img {
-      width: 48px;
-      height: 48px;
-    }
-    i {
-      color: #000;
-      font-style: normal;
-    }
-  }
-  .select-account h3 {
-    margin-bottom: 10px;
-    font-size: 14px;
-  }
-  .network-list {
-    margin-left: 30px;
-    h3 {
-      margin-bottom: 5px;
-      font-size: 14px;
-    }
-    .el-radio {
-      display: block;
-    }
-  }
-  .btn-wrap {
-    text-align: center;
-    margin-top: 70px;
-    .el-button {
-      height: 35px;
-      border-radius: 5px;
-      font-size: 12px;
-      padding: 12px 0px;
-      width: 120px;
-      &+.el-button {
-        margin-left: 20px;
+      margin-top: 70px;
+      .el-button {
+        height: 35px;
+        border-radius: 5px;
+        font-size: 12px;
+        padding: 12px 0px;
+        width: 120px;
+        & + .el-button {
+          margin-left: 20px;
+        }
       }
     }
   }
-}
 </style>

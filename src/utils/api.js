@@ -79,6 +79,7 @@ export const crossFee = 0.01;
 const nSdk = {NERVE: nerve, NULS: nuls};
 
 export class NTransfer {
+
   constructor(props) {
     if (!props.chain) {
       throw "未获取到交易网络，组装交易失败";

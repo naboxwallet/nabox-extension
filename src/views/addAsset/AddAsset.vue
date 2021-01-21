@@ -6,7 +6,13 @@
       </el-input>
       <ul>
         <li v-for="item in assetsList" :key="getKey(item)">
-          <img :src="item.icon"/>
+          <!--<img :src="item.icon"/>-->
+          <el-image :src="item.icon">
+          <span slot="error" class="image-slot">
+            <i class="el-icon-picture-outline"></i>
+          </span>
+          </el-image>
+
           <div class="asset-info">
             <p>{{ item.symbol }}</p>
             <span>{{ superLong(item.contractAddress) }}</span>
@@ -57,23 +63,20 @@
     },
 
     methods: {
+
       superLong(str, len = 10) {
         return superLong(str, len);
       },
+
       getKey(item) {
-        return item.contractAddress
-          ? item.contractAddress
-          : item.chainId + "-" + item.assetId;
+        return item.contractAddress ? item.contractAddress : item.chainId + "-" + item.assetId;
       },
+
       async searchAsset() {
         this.loading = true;
         const res = await this.$request({
           url: "/asset/query",
-          data: {
-            chain: this.$route.query.chain,
-            //searchKey: this.searchVal.toUpperCase()
-            searchKey: this.searchVal
-          }
+          data: {chain: this.$route.query.chain, searchKey: this.searchVal}
         });
         if (res.code === 1000) {
           res.data.map(v => {
@@ -94,30 +97,24 @@
         }
         this.loading = false;
       },
+
       async focusAsset(item) {
-        //console.log(item, 44);
         const {chain, address} = this.$route.query;
         const assetInfo = item.contractAddress ?
           {contractAddress: item.contractAddress} : {chainId: item.chainId, assetId: item.assetId};
-        const res = await this.$request({
-          url: "/wallet/address/asset/focus",
-          data: {
-            chain,
-            address,
-            focus: item.select,
-            ...assetInfo
-          }
-        });
+        let newData = {chain, address, focus: item.select, ...assetInfo};
+        //console.log(newData);
+        const res = await this.$request({url: "/wallet/address/asset/focus", data: newData});
+        //console.log(res);
         if (res.code !== 1000) {
-          this.$message({
-            type: "error",
-            message: res.data
-          });
+          this.$message({type: "error", message: res.data});
         }
       },
+
       submit() {
         this.$router.back();
       }
+
     }
   };
 </script>
@@ -137,11 +134,15 @@
       align-items: center;
       height: 62px;
       border-bottom: 1px solid #e9ebf3;
-      img {
+      .el-image {
         width: 32px;
         height: 32px;
-        margin-right: 22px;
+        margin-right: 20px;
+        i {
+          font-size: 34px;
+        }
       }
+
       .asset-info {
         flex: 1;
       }

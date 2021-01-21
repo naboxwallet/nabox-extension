@@ -23,13 +23,11 @@
       }
     },
     async mounted() {
-      // await ExtensionPlatform.clear(); //清除本地数据
-      // await ExtensionPlatform.remove("nabox");
-      var a = await ExtensionPlatform.get();
+      let a = await ExtensionPlatform.get();
       console.log(a, "===---=storage=---===");
       const accountList = await getStorage("accountList", []);
       const network = await getStorage("network", runEnvironment);
-      console.log(accountList, network, "app-mounted");
+      //console.log(accountList, network, "app-mounted");
       this.$store.commit("setAccount", accountList);
       this.$store.commit("setNetwork", network);
     }

@@ -20,6 +20,7 @@
     },
 
     methods: {
+
       async checkPassword() {
         const correct = await checkPassword(this.password);
         if (correct) {

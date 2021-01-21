@@ -83,11 +83,7 @@
         }
         const {aesPri, pub, beta, main} = addressInfo;
         if (!aesPri || !pub || !beta || !main || !beta.NERVE || !beta.Ethereum) {
-          this.$message({
-            message: this.$t("public.createError"),
-            type: "error",
-            duration: 2000
-          });
+          this.$message({message: this.$t("public.createError"), type: "error", duration: 2000});
           this.loading = false;
           return false;
         } else {
@@ -95,10 +91,7 @@
           const exit = await this.checkNewAccount(aesPri);
           const syncRes = await this.syncAccount(pub, beta);
           if (!syncRes) {
-            this.$message({
-              type: "error",
-              message: "网络异常，请稍后再试"
-            });
+            this.$message({type: "error", message: "网络异常，请稍后再试"});
             this.loading = false;
             return;
           }
@@ -135,7 +128,6 @@
           } else {
             this.$router.push("/");
           }
-
         }
       },
 
@@ -146,18 +138,10 @@
 
       async syncAccount(pub, accounts) {
         const addressList = Object.keys(accounts).map(v => {
-          return {
-            chain: v,
-            address: accounts[v]
-          };
+          return {chain: v, address: accounts[v]};
         });
-        const res = await this.$request({
-          url: "/wallet/sync",
-          data: {
-            pubKey: pub,
-            addressList
-          }
-        });
+        const res = await this.$request({url: "/wallet/sync", data: {pubKey: pub, addressList}});
+        console.log(res);
         if (res.code === 1000) {
           return true;
         }

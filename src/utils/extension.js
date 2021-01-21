@@ -1,4 +1,4 @@
-import { checkForError } from "./util";
+import {checkForError} from "./util";
 
 class ExtensionPlatform {
   getVersion() {
@@ -101,12 +101,12 @@ class ExtensionPlatform {
     if (route) {
       extensionURL += `#${route}`;
     }
-    this.openTab({ url: extensionURL });
+    this.openTab({url: extensionURL});
   }
 
   //弹窗显示交易
   showTransactionNotification(txMeta) {
-    const { status } = txMeta;
+    const {status} = txMeta;
     if (status === "confirmed") {
       this._showConfirmedTransaction(txMeta);
     } else if (status === "failed") {
@@ -129,7 +129,7 @@ class ExtensionPlatform {
     const txHash = "我是失败hash";
     const title = "Failed transaction";
     const message = `Transaction ${txHash} failed! ${errorMessage ||
-      txMeta.msg}`;
+    txMeta.msg}`;
     this._showNotification(title, message);
   }
 
@@ -151,7 +151,7 @@ class ExtensionPlatform {
   //浏览器新tab打开
   _viewOnScan(txId) {
     if (txId.startsWith("https://")) {
-      chrome.tabs.create({ url: txId })
+      chrome.tabs.create({url: txId})
     }
   }
 
@@ -171,7 +171,7 @@ class ExtensionPlatform {
   //聚焦某个窗口
   focusWindow(windowId) {
     return new Promise((resolve, reject) => {
-      chrome.windows.update(windowId, { focused: true }, () => {
+      chrome.windows.update(windowId, {focused: true}, () => {
         const error = checkForError();
         if (error) {
           return reject(error);
@@ -194,4 +194,5 @@ class ExtensionPlatform {
     });
   }
 }
+
 export default new ExtensionPlatform();

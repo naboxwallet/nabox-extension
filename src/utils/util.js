@@ -5,7 +5,7 @@ import sdk from "nerve-sdk-js/lib/api/sdk";
 import {request} from "./request";
 import {runEnvironment} from "@/config";
 
-var CryptoJS = require("crypto-js");
+let CryptoJS = require("crypto-js");
 
 // 10的N 次方
 export function Power(arg) {

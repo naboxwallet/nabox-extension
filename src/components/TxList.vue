@@ -52,12 +52,15 @@
       }
     },
     methods: {
+
       superLong(str, len = 5) {
         return superLong(str, len);
       },
+
       handleClick(item) {
         this.$emit("toDetail", item);
       },
+
       load() {
         this.$emit("loadMoreTx");
       }

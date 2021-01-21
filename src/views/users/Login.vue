@@ -1,21 +1,18 @@
 <template>
   <div class="login-page" v-loading="loading">
     <img src="../../assets/img/logo.svg" alt=""/>
-    <el-form
-            :model="newAddressForm"
-            status-icon
-            :rules="newAddressRules"
-            ref="newAddress"
-            label-position="top"
-    >
+    <el-form :model="newAddressForm" status-icon :rules="newAddressRules" ref="newAddress" label-position="top">
       <el-form-item :label="$t('login.login8')" prop="pri" v-if="importAddress">
-        <el-input type="textarea" v-model.trim="newAddressForm.pri"></el-input>
+        <el-input type="textarea" v-model.trim="newAddressForm.pri">
+        </el-input>
       </el-form-item>
       <el-form-item :label="$t('public.password')" prop="pass">
-        <el-input type="password" v-model="newAddressForm.pass"></el-input>
+        <el-input type="password" v-model="newAddressForm.pass">
+        </el-input>
       </el-form-item>
       <el-form-item :label="$t('public.checkPassword')" prop="checkPass">
-        <el-input type="password" v-model="newAddressForm.checkPass"></el-input>
+        <el-input type="password" v-model="newAddressForm.checkPass">
+        </el-input>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="submitForm('newAddress')">
@@ -104,14 +101,16 @@
     },
 
     methods: {
+
       changeLogin(type) {
-        this.newAddressForm.pass = this.newAddressForm.checkPass = this.newAddressForm.pri = ""
+        this.newAddressForm.pass = this.newAddressForm.checkPass = this.newAddressForm.pri = "";
         if (type) {
           this.importAddress = true;
         } else {
           this.importAddress = false;
         }
       },
+
       submitForm(formName) {
         this.$refs[formName].validate(async valid => {
           if (valid) {
@@ -125,11 +124,7 @@
             }
             const {aesPri, pub, beta, main} = addressInfo;
             if (!aesPri || !pub || !beta || !main || !beta.NERVE || !beta.Ethereum) {
-              this.$message({
-                message: this.$t("public.createError"),
-                type: "error",
-                duration: 2000
-              });
+              this.$message({message: this.$t("public.createError"), type: "error", duration: 2000});
               this.loading = false;
               return false;
             } else {
@@ -153,10 +148,7 @@
                 this.loading = false;
                 this.$router.push("/");
               } else {
-                this.$message({
-                  type: "error",
-                  message: "网络异常，请稍后再试"
-                });
+                this.$message({type: "error", message: "网络异常，请稍后再试"});
                 this.loading = false;
               }
             }
@@ -165,20 +157,12 @@
           }
         });
       },
+
       async syncAccount(pub, accounts) {
         const addressList = Object.keys(accounts).map(v => {
-          return {
-            chain: v,
-            address: accounts[v]
-          };
+          return {chain: v, address: accounts[v]};
         });
-        const res = await this.$request({
-          url: "/wallet/sync",
-          data: {
-            pubKey: pub,
-            addressList
-          }
-        });
+        const res = await this.$request({url: "/wallet/sync", data: {pubKey: pub, addressList}});
         if (res.code === 1000) {
           return true;
         }

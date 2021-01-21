@@ -1,7 +1,7 @@
 <template>
   <div class="backup-page">
     Backup
-    <br />
+    <br/>
     <div class="tc">
       <el-button @click="$router.push('/')" type="primary">Home</el-button>
     </div>
@@ -9,22 +9,24 @@
 </template>
 
 <script>
-export default {
-  data() {
-    return {};
-  },
+  export default {
+    data() {
+      return {};
+    },
 
-  components: {},
+    components: {},
 
-  watch: {},
+    watch: {},
 
-  computed: {},
+    computed: {},
 
-  created() {},
+    created() {
+    },
 
-  mounted() {},
+    mounted() {
+    },
 
-  methods: {}
-};
+    methods: {}
+  };
 </script>
 <style lang="less"></style>

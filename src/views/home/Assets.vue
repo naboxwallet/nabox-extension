@@ -119,13 +119,16 @@
     },
 
     methods: {
+
       superLong(str, len = 7) {
         return superLong(str, len);
       },
+
       handleChange(chain, background) {
         this.cardBackground = background;
         this.$emit("changeSymbol", chain);
       },
+
       copy(str) {
         copys(str);
         this.$message({
@@ -134,22 +137,28 @@
           duration: 1000
         });
       },
+
       toAssetDetail(info) {
-        let params = info.contractAddress
-          ? {contractAddress: info.contractAddress}
-          : {assetChainId: info.chainId, assetId: info.assetId};
+        let params = info.contractAddress ? {contractAddress: info.contractAddress} : {
+          assetChainId: info.chainId,
+          assetId: info.assetId
+        };
         this.$emit("toAssetDetail", params);
       },
+
       toTxDetail(item) {
         this.$emit("toTxDetail", item);
       },
+
       toTransfer(cross) {
         const path = cross ? "/cross-chain-transfer" : "in-chain-transfer";
         this.$emit("toTransfer", path);
       },
+
       toAddAsset() {
         this.$emit("toAddAsset");
       },
+
       loadMoreTx() {
         this.$emit("loadMoreTx");
       }

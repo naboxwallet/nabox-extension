@@ -73,7 +73,7 @@
   import Assets from "@/views/home/Assets";
   import Modal from "@/components/Modal";
   import QRCode from "qrcodejs2";
-  import {divisionDecimals, formatTime, getStorage, Plus, Division, Times} from "@/utils/util";
+  import {divisionDecimals, getStorage, Plus, Division, Times} from "@/utils/util";
   import ExtensionPlatform from "@/utils/extension";
 
   export default {
@@ -292,9 +292,10 @@
             pageSize: this.pageSize
           }
         });
+        //console.log(res);
         if (res.code === 1000) {
           res.data.records.map(v => {
-            v.createTime = formatTime(v.createTime * 1000);
+            //v.createTime = formatTime(v.createTime * 1000);
             v.amount = divisionDecimals(v.amount, v.decimals);
           });
           //this.txList = this.txList.concat(...res.data.records);

@@ -1,4 +1,5 @@
-import { Minus } from "./util";
+import {Minus} from "./util";
+
 const ethers = require("ethers");
 
 const BNB_RPC_URL = {
@@ -9,7 +10,7 @@ const BNB_RPC_URL = {
 /**
  *获取provider
  * @param chain
- * @param isMetaMask
+ * @param network
  */
 export function getProvider(chain, network) {
   const ETHNET = network === "main" ? "homestead" : "ropsten";
@@ -32,7 +33,6 @@ export function validateAddress(account) {
 
 /**
  *获取eth余额
- * @param ethers
  * @param provider
  * @param address
  */
@@ -46,6 +46,7 @@ export function getEthBalance(provider, address) {
       console.error("获取ETH余额失败" + e);
     });
 }
+
 /**
  * ERC20合约余额
  * @param provider
@@ -54,18 +55,8 @@ export function getEthBalance(provider, address) {
  * @param tokenDecimals token小数位数
  * @param address 账户
  */
-export function getERC20Balance(
-  provider,
-  erc20BalanceAbiFragment,
-  erc20Address,
-  tokenDecimals,
-  address
-) {
-  let contract = new ethers.Contract(
-    erc20Address,
-    erc20BalanceAbiFragment,
-    provider
-  );
+export function getERC20Balance(provider, erc20BalanceAbiFragment, erc20Address, tokenDecimals, address) {
+  let contract = new ethers.Contract(erc20Address, erc20BalanceAbiFragment, provider);
   let balancePromise = contract.balanceOf(address);
   return balancePromise
     .then(balance => {
@@ -109,6 +100,7 @@ function getSpeedUpGasPrice(provider) {
     return gasPrice.add(GWEI_10);
   });
 }
+
 /**
  * 发送ETH
  * @param provider
@@ -117,16 +109,8 @@ function getSpeedUpGasPrice(provider) {
  * @param value 转入金额
  */
 export async function sendETH(provider, privateKey, toAddress, value) {
-  const { wallet, amount, nonce } = await getETHTXBaseInfo(
-    provider,
-    privateKey,
-    value
-  );
-  let tx = {
-    nonce: nonce,
-    to: toAddress,
-    value: amount
-  };
+  const {wallet, amount, nonce} = await getETHTXBaseInfo(provider, privateKey, value);
+  let tx = {nonce: nonce, to: toAddress, value: amount};
   let sendPromise = wallet.sendTransaction(tx);
   return sendPromise.then(tx => {
     return tx.hash;
@@ -141,18 +125,9 @@ export async function sendETH(provider, privateKey, toAddress, value) {
  * @param value 转入金额
  */
 export async function speedUpSendETH(provider, privateKey, toAddress, value) {
-  const { wallet, amount, nonce } = await getETHTXBaseInfo(
-    provider,
-    privateKey,
-    value
-  );
+  const {wallet, amount, nonce} = await getETHTXBaseInfo(provider, privateKey, value);
   const gasPrice = await getSpeedUpGasPrice(provider);
-  let tx = {
-    nonce: nonce,
-    to: toAddress,
-    value: amount,
-    gasPrice: gasPrice
-  };
+  let tx = {nonce: nonce, to: toAddress, value: amount, gasPrice: gasPrice};
   let sendPromise = wallet.sendTransaction(tx);
   return sendPromise.then(tx => {
     //console.log(tx.hash);
@@ -164,18 +139,11 @@ export async function speedUpSendETH(provider, privateKey, toAddress, value) {
  * 获取ETH交易nonce、数量
  */
 async function getETHTXBaseInfo(provider, privateKey, value) {
-  privateKey = ethers.utils.hexZeroPad(
-    ethers.utils.hexStripZeros("0x" + privateKey),
-    32
-  );
+  privateKey = ethers.utils.hexZeroPad(ethers.utils.hexStripZeros("0x" + privateKey), 32);
   const wallet = new ethers.Wallet(privateKey, provider);
   const amount = ethers.utils.parseEther(value);
   const nonce = await getNonce(provider, wallet.address);
-  return {
-    wallet,
-    nonce,
-    amount
-  };
+  return {wallet, nonce, amount};
 }
 
 /**
@@ -187,24 +155,9 @@ async function getETHTXBaseInfo(provider, privateKey, value) {
  * @param toAddress 转入地址
  * @param value 转入金额
  */
-export async function sendERC20(
-  provider,
-  privateKey,
-  erc20Address,
-  tokenDecimals,
-  toAddress,
-  value
-) {
-  const { contract, nonce, numberOfTokens } = await getERC20TXBaseInfo(
-    provider,
-    privateKey,
-    erc20Address,
-    tokenDecimals,
-    value
-  );
-  const txs = {
-    nonce: nonce
-  };
+export async function sendERC20(provider, privateKey, erc20Address, tokenDecimals, toAddress, value) {
+  const {contract, nonce, numberOfTokens} = await getERC20TXBaseInfo(provider, privateKey, erc20Address, tokenDecimals, value);
+  const txs = {nonce: nonce};
   return contract.transfer(toAddress, numberOfTokens, txs).then(tx => {
     return tx.hash;
   });
@@ -219,26 +172,10 @@ export async function sendERC20(
  * @param toAddress 转入地址
  * @param value 转入金额
  */
-export async function speedUpSendERC20(
-  provider,
-  privateKey,
-  erc20Address,
-  tokenDecimals,
-  toAddress,
-  value
-) {
-  const { contract, nonce, numberOfTokens } = await getERC20TXBaseInfo(
-    provider,
-    privateKey,
-    erc20Address,
-    tokenDecimals,
-    value
-  );
+export async function speedUpSendERC20(provider, privateKey, erc20Address, tokenDecimals, toAddress, value) {
+  const {contract, nonce, numberOfTokens} = await getERC20TXBaseInfo(provider, privateKey, erc20Address, tokenDecimals, value);
   const gasPrice = await getSpeedUpGasPrice(provider);
-  let txs = {
-    nonce: nonce,
-    gasPrice: gasPrice
-  };
+  let txs = {nonce: nonce, gasPrice: gasPrice};
   return contract.transfer(toAddress, numberOfTokens, txs).then(tx => {
     return tx.hash;
   });
@@ -247,49 +184,26 @@ export async function speedUpSendERC20(
 /**
  * 获取ERC20交易合约、nonce 、 数量
  */
-async function getERC20TXBaseInfo(
-  provider,
-  privateKey,
-  erc20Address,
-  tokenDecimals,
-  value
-) {
+async function getERC20TXBaseInfo(provider, privateKey, erc20Address, tokenDecimals, value) {
   const erc20TransferAbiFragment = [
     {
       name: "transfer",
       type: "function",
       inputs: [
-        {
-          name: "_to",
-          type: "address"
-        },
-        {
-          type: "uint256",
-          name: "_tokens"
-        }
+        {name: "_to", type: "address"},
+        {type: "uint256", name: "_tokens"}
       ],
       constant: false,
       outputs: [],
       payable: false
     }
   ];
-  privateKey = ethers.utils.hexZeroPad(
-    ethers.utils.hexStripZeros("0x" + privateKey),
-    32
-  );
+  privateKey = ethers.utils.hexZeroPad(ethers.utils.hexStripZeros("0x" + privateKey), 32);
   const wallet = new ethers.Wallet(privateKey, provider);
-  const contract = new ethers.Contract(
-    erc20Address,
-    erc20TransferAbiFragment,
-    wallet
-  );
+  const contract = new ethers.Contract(erc20Address, erc20TransferAbiFragment, wallet);
   const numberOfTokens = ethers.utils.parseUnits(value, tokenDecimals);
   const nonce = await getNonce(provider, wallet.address);
-  return {
-    contract,
-    nonce,
-    numberOfTokens
-  };
+  return {contract, nonce, numberOfTokens};
 }
 
 /**
@@ -312,9 +226,7 @@ export function getEthBlockNumber(provider) {
 
 /////////////////////////////////////////////////////////////////////////////////////////// metamask 跨链转入
 
-const CROSS_OUT_ABI = [
-  "function crossOut(string to, uint256 amount, address ERC20) public payable returns (bool)"
-];
+const CROSS_OUT_ABI = ["function crossOut(string to, uint256 amount, address ERC20) public payable returns (bool)"];
 const ERC20_ABI = [
   "function allowance(address owner, address spender) external view returns (uint256)",
   "function approve(address spender, uint256 amount) external returns (bool)"
@@ -327,12 +239,7 @@ const ERC20_ABI = [
  * @param multySignAddress 多签地址
  * @param address metamask eth地址
  */
-export function getERC20Allowance(
-  provider,
-  contractAddress,
-  multySignAddress,
-  address
-) {
+export function getERC20Allowance(provider, contractAddress, multySignAddress, address) {
   const contract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
   const allowancePromise = contract.allowance(address, multySignAddress);
   return allowancePromise
@@ -357,12 +264,7 @@ export function getERC20Allowance(
  * @param multySignAddress 多签地址
  * @param address metamask eth地址
  */
-export async function approveERC20(
-  provider,
-  contractAddress,
-  multySignAddress,
-  address
-) {
+export async function approveERC20(provider, contractAddress, multySignAddress, address) {
   const iface = new ethers.utils.Interface(ERC20_ABI);
   const data = iface.functions.approve.encode([
     multySignAddress,
@@ -370,19 +272,11 @@ export async function approveERC20(
       "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
     )
   ]);
-  const transactionParameters = {
-    to: contractAddress,
-    from: address,
-    value: "0x00",
-    data: data
-  };
+  const transactionParameters = {to: contractAddress, from: address, value: "0x00", data: data};
   const failed = await validate(provider, transactionParameters);
   if (failed) {
     console.error("failed approveERC20" + failed);
-    return {
-      success: false,
-      msg: "failed approveERC20" + failed
-    };
+    return {success: false, msg: "failed approveERC20" + failed};
   }
   delete transactionParameters.from; //etherjs 4.0 from参数无效 报错
   return sendTransaction(provider, transactionParameters);
@@ -395,31 +289,15 @@ export async function approveERC20(
  * @param address nerve地址
  * @param numbers 交易数量
  */
-export async function sendETHForMK(
-  provider,
-  multySignAddress,
-  address,
-  numbers
-) {
+export async function sendETHForMK(provider, multySignAddress, address, numbers) {
   const amount = ethers.utils.parseEther(numbers);
   const iface = new ethers.utils.Interface(CROSS_OUT_ABI);
-  const data = iface.functions.crossOut.encode([
-    address,
-    amount,
-    "0x0000000000000000000000000000000000000000"
-  ]);
-  const transactionParameters = {
-    to: multySignAddress,
-    value: amount,
-    data: data
-  };
+  const data = iface.functions.crossOut.encode([address, amount, "0x0000000000000000000000000000000000000000"]);
+  const transactionParameters = {to: multySignAddress, value: amount, data: data};
   const failed = await validate(provider, transactionParameters);
   if (failed) {
     console.error("failed approveERC20" + failed);
-    return {
-      success: false,
-      msg: "failed approveERC20" + failed
-    };
+    return {success: false, msg: "failed approveERC20" + failed};
   }
   return sendTransaction(provider, transactionParameters);
 }
@@ -434,22 +312,10 @@ export async function sendETHForMK(
  * @param decimals token精度
  * @param numbers 交易数量
  */
-export async function sendERC20ForMK(
-  provider,
-  contractAddress,
-  multySignAddress,
-  fromAddress,
-  address,
-  decimals,
-  numbers
-) {
+export async function sendERC20ForMK(provider, contractAddress, multySignAddress, fromAddress, address, decimals, numbers) {
   const numberOfTokens = ethers.utils.parseUnits(numbers, decimals);
   const iface = new ethers.utils.Interface(CROSS_OUT_ABI);
-  const data = iface.functions.crossOut.encode([
-    address,
-    numberOfTokens,
-    contractAddress
-  ]);
+  const data = iface.functions.crossOut.encode([address, numberOfTokens, contractAddress]);
   const transactionParameters = {
     to: multySignAddress,
     from: fromAddress, //验证合约调用需要from,必传
@@ -459,10 +325,7 @@ export async function sendERC20ForMK(
   const failed = await validate(provider, transactionParameters);
   if (failed) {
     console.error("failed approveERC20" + failed);
-    return {
-      success: false,
-      msg: "failed approveERC20" + failed
-    };
+    return {success: false, msg: "failed approveERC20" + failed};
   }
   delete transactionParameters.from; //etherjs 4.0 from参数无效 报错
   return sendTransaction(provider, transactionParameters);
@@ -479,24 +342,14 @@ async function validate(provider, tx) {
 }
 
 async function sendTransaction(provider, transactionParameters) {
-  /* provider.listAccounts().then((accounts) => {
-    
-    console.log(accounts,'====accounts====');
-  }); */
   const wallet = provider.getSigner();
   try {
     const tx = await wallet.sendTransaction(transactionParameters);
     if (tx.hash) {
-      return {
-        success: true,
-        msg: tx.hash
-      };
+      return {success: true, msg: tx.hash};
     }
   } catch (e) {
-    return {
-      success: false,
-      msg: e
-    };
+    return {success: false, msg: e};
   }
 }
 
@@ -508,19 +361,9 @@ async function sendTransaction(provider, transactionParameters) {
  * @param heterogeneousChainUSD    异构链币种的USDT价格
  * @param isToken   是否token资产
  */
-export async function calNVTOfWithdrawTest(
-  provider,
-  nvtUSD,
-  heterogeneousChainUSD,
-  isToken
-) {
+export async function calNVTOfWithdrawTest(provider, nvtUSD, heterogeneousChainUSD, isToken) {
   const gasPrice = await getWithdrawGas(provider);
-  const result = calNVTOfWithdraw(
-    nvtUSD,
-    gasPrice,
-    heterogeneousChainUSD,
-    isToken
-  );
+  const result = calNVTOfWithdraw(nvtUSD, gasPrice, heterogeneousChainUSD, isToken);
   return result;
 }
 

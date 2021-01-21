@@ -13,13 +13,8 @@
           </el-button>
         </div>
         <div class="border">
-          <div
-                  class="account setting-item common-pd"
-                  :class="{ active: item.selection }"
-                  v-for="item in accountList"
-                  :key="item.pub"
-                  @click="switchAccount(item.pub)"
-          >
+          <div class="account setting-item common-pd" :class="{ active: item.selection }"
+               v-for="item in accountList" :key="item.pub" @click="switchAccount(item.pub)">
             <p class="border">
               <span class="circle"></span>
               <span class="overflow">{{ item.name }}</span>

@@ -25,10 +25,7 @@
           <p class="label">From</p>
           <div class="transfer-info">
             <span>{{ txInfo.fromChain }}</span>
-            <p
-              class="click"
-              @click="toUrl(txInfo.fromAddress, 'address', txInfo.fromChain)"
-            >
+            <p class="click" @click="toUrl(txInfo.fromAddress, 'address', txInfo.fromChain)">
               {{ superLong(txInfo.fromAddress) }}
             </p>
           </div>
@@ -44,14 +41,12 @@
           <div class="transfer-info">
             <span>{{ txInfo.toChain }}</span>
             <p class="click" @click="toUrl(txInfo.toAddress, 'address', txInfo.toChain)">
-              {{ superLong(txInfo.toAddress) }}
+              {{superLong(txInfo.toAddress)}}
             </p>
           </div>
           <div class="transfer-info">
             <span>TXID</span>
-            <p class="click" @click="toUrl(txInfo.toHash, 'hash', txInfo.toChain)">
-              {{ superLong(txInfo.toHash) }}
-            </p>
+            <p class="click" @click="toUrl(txInfo.toHash, 'hash', txInfo.toChain)">{{ superLong(txInfo.toHash) }}</p>
           </div>
         </div>
       </div>
@@ -77,11 +72,7 @@
       </template>
       <div class="transfer-item">
         <label>{{ $t("public.status") }}</label>
-        {{
-          txInfo.isMultiCross
-            ? $t("crossStatusType." + txInfo.crossStatus)
-            : $t("statusType." + txInfo.status)
-        }}
+        {{txInfo.isMultiCross ? $t("crossStatusType." + txInfo.crossStatus) : $t("statusType." + txInfo.status) }}
       </div>
       <div class="transfer-item">
         <label>{{ $t("public.fee") }}</label>
@@ -96,166 +87,162 @@
 </template>
 
 <script>
-import CommonHead from "@/components/CommonHead";
-import { formatTime, superLong, divisionDecimals, getOrigin } from "@/utils/util";
-export default {
-  data() {
-    return {
-      loading: true,
-      txInfo: {}
-    };
-  },
+  import CommonHead from "@/components/CommonHead";
+  import {superLong, divisionDecimals, getOrigin} from "@/utils/util";
 
-  components: {
-    CommonHead
-  },
-
-  watch: {},
-
-  computed: {},
-
-  created() {
-    this.getTxInfo();
-  },
-
-  mounted() {},
-
-  methods: {
-    superLong(str, len = 12) {
-      return superLong(str, len);
+  export default {
+    data() {
+      return {
+        loading: true,
+        txInfo: {}
+      };
     },
-    async getTxInfo() {
-      const { chain, txHash, transCoinId } = this.$route.query;
-      const res = await this.$request({
-        url: "/tx/coin/info",
-        data: { chain, txHash, transCoinId }
-      });
-      // const txInfo = {};
-      if (res.code === 1000) {
-        const data = res.data;
-        const commonInfo = {
-          amount: divisionDecimals(data.tx.amount, data.tx.decimals),
-          createTime: formatTime(data.tx.createTime * 1000),
-          fee: data.tx.fee,
-          symbol: data.tx.symbol,
-          remark: data.tx.remark,
-          type: data.tx.type
-        };
-        let txInfo = {};
-        if (data.crossTx) {
-          txInfo = {
-            fromChain: data.crossTx.fromChain,
-            fromAddress: data.crossTx.fromAddress,
-            fromHash: data.crossTx.txHash,
-            // fromStatus: data.crossTx.status,
-            toChain: data.crossTx.toChain,
-            toAddress: data.crossTx.toAddress,
-            toHash: data.crossTx.crossTxHash,
-            // toStatus: data.crossTx.status,
-            crossStatus: data.crossTx.status,
-            isMultiCross: true,
-            ...commonInfo
+
+    components: {
+      CommonHead
+    },
+
+    watch: {},
+
+    computed: {},
+
+    created() {
+      this.getTxInfo();
+    },
+
+    mounted() {
+    },
+
+    methods: {
+
+      superLong(str, len = 12) {
+        return superLong(str, len);
+      },
+
+      async getTxInfo() {
+        const {chain, txHash, transCoinId} = this.$route.query;
+        const res = await this.$request({url: "/tx/coin/info", data: {chain, txHash, transCoinId}});
+        if (res.code === 1000) {
+          const data = res.data;
+          //console.log(data);
+          const commonInfo = {
+            amount: divisionDecimals(data.tx.amount, data.tx.decimals),
+            //createTime: formatTime(data.tx.createTime * 1000),
+            createTime: data.tx.createTime,
+            fee: data.tx.fee,
+            symbol: data.tx.symbol,
+            remark: data.tx.remark,
+            type: data.tx.type
           };
+          let txInfo = {};
+          if (data.crossTx) {
+            txInfo = {
+              fromChain: data.crossTx.fromChain,
+              fromAddress: data.crossTx.fromAddress,
+              fromHash: data.crossTx.txHash,
+              toChain: data.crossTx.toChain,
+              toAddress: data.crossTx.toAddress,
+              toHash: data.crossTx.crossTxHash,
+              crossStatus: data.crossTx.status,
+              isMultiCross: true,
+              ...commonInfo
+            };
+          } else {
+            txInfo = {
+              fromAddress: data.tx.froms,
+              toAddress: data.tx.tos,
+              hash: data.tx.id,
+              status: data.tx.status, ...commonInfo
+            };
+          }
+          this.txInfo = txInfo;
+          this.loading = false;
+        }
+      },
+
+      toUrl(query, type, openChain) {
+        const chain = openChain || this.$route.query.chain;
+        const origin = getOrigin(chain, this.$store.state.network);
+        let url = "";
+        if (chain === "NULS" || chain === "NERVE") {
+          if (type === "address") {
+            url = "/address/info?address=" + query;
+          } else if (type === "hash") {
+            url = "/transaction/info?hash=" + query;
+          }
         } else {
-          txInfo = {
-            fromAddress: data.tx.froms,
-            toAddress: data.tx.tos,
-            hash: data.tx.id,
-            status: data.tx.status,
-            ...commonInfo
-          };
+          if (type === "address") {
+            url = "/address/" + query;
+          } else if (type === "hash") {
+            url = "/tx/" + query;
+          }
         }
-        this.txInfo = txInfo;
-        this.loading = false;
+        window.open(origin + url);
       }
-    },
-    toUrl(query, type, openChain) {
-      const chain = openChain || this.$route.query.chain;
-      const origin = getOrigin(chain, this.$store.state.network);
-      let url = "";
-      if (chain === "NULS" || chain === "NERVE") {
-        if (type === "address") {
-          // if (this.txInfo.type === 16) {
-          //   url = "/contracts/info?contractAddress=" + query;
-          // } else {
-          url = "/address/info?address=" + query;
-          // }
-        } else if (type === "hash") {
-          url = "/transaction/info?hash=" + query;
-        }
-      } else {
-        if (type === "address") {
-          url = "/address/" + query;
-        } else if (type === "hash") {
-          url = "/tx/" + query;
-        }
-      }
-      window.open(origin + url);
     }
-  }
-};
+  };
 </script>
 <style lang="less">
-.transfer-info {
-  .content {
-    padding: 15px 20px 0;
-  }
-  .transfer-item {
-    display: flex;
-    margin-bottom: 15px;
-    color: #3a3c44;
-    line-height: 1.2;
-    font-size: 12px;
-    label {
-      width: 70px;
-      color: #a5abb2;
-      font-size: 12px;
+  .transfer-info {
+    .content {
+      padding: 15px 20px 0;
     }
-    .click {
-      word-break: break-all;
-      flex: 1;
-    }
-    .from-info, .to-info {
-      span {
-        color: #6d757c;
-        // font-size: 12px;
-      }
-      p {
-        font-size: 14px;
-        padding: 5px 0;
-      }
-    }
-  }
-  .remark-wrap {
-    flex-wrap: wrap;
-    span {
-      word-break: break-all;
-    }
-  }
-  .transfer-tx-info {
-    .from, .to {
-      margin-bottom: 12px;
-    }
-    .label {
-      color: #a5abb2;
-      font-size: 12px;
-      margin-bottom: 2px;
-    }
-    .transfer-info {
+    .transfer-item {
       display: flex;
+      margin-bottom: 15px;
       color: #3a3c44;
-      line-height: 1.4;
+      line-height: 1.2;
       font-size: 12px;
-      align-items: center;
-      span {
+      label {
         width: 70px;
-        color: #6d757c;
+        color: #a5abb2;
+        font-size: 12px;
       }
-      p {
-        font-size: 14px;
+      .click {
+        word-break: break-all;
+        flex: 1;
+      }
+      .from-info, .to-info {
+        span {
+          color: #6d757c;
+          // font-size: 12px;
+        }
+        p {
+          font-size: 14px;
+          padding: 5px 0;
+        }
       }
     }
-  }
+    .remark-wrap {
+      flex-wrap: wrap;
+      span {
+        word-break: break-all;
+      }
+    }
+    .transfer-tx-info {
+      .from, .to {
+        margin-bottom: 12px;
+      }
+      .label {
+        color: #a5abb2;
+        font-size: 12px;
+        margin-bottom: 2px;
+      }
+      .transfer-info {
+        display: flex;
+        color: #3a3c44;
+        line-height: 1.4;
+        font-size: 12px;
+        align-items: center;
+        span {
+          width: 70px;
+          color: #6d757c;
+        }
+        p {
+          font-size: 14px;
+        }
+      }
+    }
 
-}
+  }
 </style>

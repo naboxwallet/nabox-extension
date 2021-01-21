@@ -136,7 +136,7 @@ const cn = {
     innerTransfer4: "到"
   },
   transfer: {
-    transfer1: "请输入正确的本链地址",
+    transfer1: "请输入正确的地址",
     transfer2: "请输入交易数量",
     transfer3: "金额必须为数字并且小数点后最多位数为",
     transfer4: "最大转出金额为",
@@ -195,7 +195,7 @@ const cn = {
     addAsset2: "请输入Token名称或合约地址",
   },
   assetInfo: {
-    // assetInfo1:: "" 
+    // assetInfo1:: ""
   },
   authorization: {
     authorization1: "请求获取钱包地址",

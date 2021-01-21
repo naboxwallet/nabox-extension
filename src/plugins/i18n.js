@@ -4,11 +4,7 @@ import VueI18n from "vue-i18n";
 import messages from "../locales";
 
 Vue.use(VueI18n);
-const default_lang = window.navigator.language
-  ? window.navigator.language === "zh-CN"
-    ? "cn"
-    : "en"
-  : "en";
+const default_lang = window.navigator.language ? window.navigator.language === "zh-CN" ? "cn" : "en" : "en";
 const localLang = localStorage.getItem("lang");
 const lang = localLang ? localLang : default_lang;
 const i18n = new VueI18n({

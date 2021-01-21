@@ -27,11 +27,7 @@ Vue.prototype.$request = request;
 
 async function getConfig() {
   try {
-    const betaRes = await request({
-      url: "/api/chain/config",
-      method: "get",
-      network: "beta"
-    });
+    const betaRes = await request({url: "/api/chain/config", method: "get", network: "beta"});
     //console.log(betaRes, "==config==");
     let beta = {};
     if (betaRes.data && betaRes.data.length) {

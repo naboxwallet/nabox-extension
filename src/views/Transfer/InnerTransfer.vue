@@ -778,6 +778,7 @@
           //console.log(fromNetwork, toNetwork);
           if (fromNetwork === "NULS") {
             hex1 = await this.getNerveNulsHex("NULS"); // nuls 跨到nerve hex
+            hex1 = hex1.data ? hex1.data : '';
             if (toNetwork !== "NERVE") {
               hex2 = await this.getWithdrawalHex("NERVE"); // nerve提现到eth，bnb hex
             }
@@ -801,6 +802,7 @@
             hex1 = await this.getCrossInHex(); // eht、bnb跨链到nerve hex
             if (toNetwork === "NULS") {
               hex2 = await this.getNerveNulsHex("NERVE");
+              hex2 = hex2.data ? hex2.data : '';
             } else if (toNetwork !== "NERVE") {
               hex2 = await this.getWithdrawalHex();
             }
@@ -813,11 +815,7 @@
           }
         } catch (e) {
           console.error("跨链交易签名失败" + e);
-          this.$message({
-            type: "error",
-            message: e,
-            duration: 2000
-          });
+          this.$message({type: "error", message: e, duration: 2000});
         }
         this.transferLoading = false;
       },
@@ -863,22 +861,12 @@
 
       async getWithdrawalHex() {
         const network = this.$store.state.network;
-        const transfer = new NTransfer({
-          chain: "NERVE",
-          network,
-          type: 43
-        });
+        const transfer = new NTransfer({chain: "NERVE", network, type: 43});
         const MAIN_INFO = this.getMainInfo("NERVE");
         const currentAccount = this.$store.getters.currentAccount[network];
         const assetInfo = this.chooseAsset.contractAddress
-          ? {
-            fromChain: this.fromNetwork,
-            contractAddress: this.chooseAsset.contractAddress
-          }
-          : {
-            assetsChainId: this.chooseAsset.chainId,
-            assetsId: this.chooseAsset.assetId
-          };
+          ? {fromChain: this.fromNetwork, contractAddress: this.chooseAsset.contractAddress}
+          : {assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId};
         const transferInfo = {
           from: currentAccount.NERVE,
           amount: timesDecimals(this.transferModal.amount, this.chooseAsset.decimals),
@@ -919,10 +907,7 @@
       async broadcastTxCross(hex1, hex2) {
         const assetInfo = this.chooseAsset.contractAddress
           ? {contractAddress: this.chooseAsset.contractAddress}
-          : {
-            chainId: this.chooseAsset.chainId,
-            assetId: this.chooseAsset.assetId
-          };
+          : {chainId: this.chooseAsset.chainId, assetId: this.chooseAsset.assetId};
         const params = {
           fromChain: this.fromNetwork,
           toChain: this.toNetwork,
@@ -934,26 +919,16 @@
         if (hex2) {
           params.crossTxHex = hex2;
         }
-        const res = await this.$request({
-          url: "/tx/cross/transfer",
-          method: "post",
-          data: params
-        });
+        console.log(params);
+        const res = await this.$request({url: "/tx/cross/transfer", method: "post", data: params});
+        console.log(res);
         if (res.code === 1000) {
-          this.$message({
-            type: "success",
-            message: this.$t("transfer.transfer13"),
-            duration: 2000
-          });
+          this.$message({type: "success", message: this.$t("transfer.transfer13"), duration: 2000});
           setTimeout(() => {
             this.$router.push("/");
           }, 1500);
         } else {
-          this.$message({
-            type: "error",
-            message: res.msg,
-            duration: 3000
-          });
+          this.$message({type: "error", message: res.msg, duration: 3000});
         }
       }
     }

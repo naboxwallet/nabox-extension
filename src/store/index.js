@@ -1,8 +1,8 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import ExtensionPlatform from "@/utils/extension";
-import { request } from "@/utils/request";
-import { getStorage } from "@/utils/util";
+import {request} from "@/utils/request";
+import {getStorage} from "@/utils/util";
 
 Vue.use(Vuex);
 
@@ -26,7 +26,7 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    async setAccount({ state, commit }, account) {
+    async setAccount({state, commit}, account) {
       let currentAccount = null;
       for (let v = 0; v < account.length; v++) {
         if (account[v].selection) {
@@ -53,15 +53,15 @@ export default new Vuex.Store({
 
       const nabox = await getStorage("nabox", {});
       nabox.currentAccount = currentAccount;
-      ExtensionPlatform.set({ nabox });
+      ExtensionPlatform.set({nabox});
     },
-    async setNetwork({ commit }, network) {
+    async setNetwork({commit}, network) {
       // console.log(5566)
-      await ExtensionPlatform.set({ network });
+      await ExtensionPlatform.set({network});
       commit("setNetwork", network);
       const nabox = await getStorage("nabox", {});
       nabox.network = network;
-      ExtensionPlatform.set({ nabox });
+      ExtensionPlatform.set({nabox});
     }
   },
   modules: {}
