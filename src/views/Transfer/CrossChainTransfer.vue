@@ -626,31 +626,4 @@
   };
 </script>
 <style lang="less">
-  /* .transfer-page {
-    height: 100%;
-    overflow-y: auto;
-    font-size: 12px;
-    // padding-bottom: 50px;
-    .content {
-      padding: 10px 25px 0;
-      .approve-tip {
-        .el-button {
-          padding: 0;
-          font-size: 12px;
-          border: none;
-        }
-      }
-      .fee-wrap {
-        display: block;
-        .fee-label {
-          color: #a5abb2;
-          margin-bottom: 2px;
-        }
-      }
-      .btn {
-        width: 100%;
-        margin: 20px 0;
-      }
-    }
-  } */
 </style>

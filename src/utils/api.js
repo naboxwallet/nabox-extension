@@ -472,14 +472,10 @@ export class ETransfer {
   async getWallet() {
     const encryptPassword = (await ExtensionPlatform.get("password")).password;
     const password = decryptPassword(encryptPassword);
-    const accountList = (await ExtensionPlatform.get("accountList"))
-      .accountList;
+    const accountList = (await ExtensionPlatform.get("accountList")).accountList;
     const currentAccount = accountList.filter(v => v.selection)[0];
     const pri = getPri(currentAccount.aesPri, password);
-    const privateKey = ethers.utils.hexZeroPad(
-      ethers.utils.hexStripZeros("0x" + pri),
-      32
-    );
+    const privateKey = ethers.utils.hexZeroPad(ethers.utils.hexStripZeros("0x" + pri), 32);
     return new ethers.Wallet(privateKey, this.provider);
   }
 
@@ -680,6 +676,7 @@ export class ETransfer {
    * @param isToken   是否token资产
    */
   async calWithdrawalNVTFee(nvtUSD, heterogeneousChainUSD, isToken) {
+    console.log(nvtUSD, heterogeneousChainUSD, isToken);
     const gasPrice = await this.getWithdrawGas();
     let gasLimit;
     if (isToken) {
@@ -690,12 +687,12 @@ export class ETransfer {
     const nvtUSDBig = ethers.utils.parseUnits(nvtUSD, 6);
     const ethUSDBig = ethers.utils.parseUnits(heterogeneousChainUSD, 6);
     const result = ethUSDBig.mul(gasPrice).mul(gasLimit).div(ethers.utils.parseUnits(nvtUSDBig.toString(), 10));
-    // console.log('result: ' + result.toString());
+    console.log('result: ' + result.toString());
     const numberStr = ethers.utils.formatUnits(result, 8).toString();
     const ceil = Math.ceil(numberStr);
-    // console.log('ceil: ' + ceil);
+    console.log('ceil: ' + ceil);
     const finalResult = ethers.utils.parseUnits(ceil.toString(), 8);
-    // console.log('finalResult: ' + finalResult);
+    console.log('finalResult: ' + finalResult);
     return finalResult;
   }
 

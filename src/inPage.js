@@ -9,7 +9,6 @@ const addListenerFromContent = () => {
         if (resolvers[i].type === event.data.type) {
           if (!event.data.status) {
             resolvers[i].reject(event.data.payload);
-            //"User rejected the request"
           } else {
             resolvers[i].resolve(event.data.payload);
           }
@@ -20,22 +19,19 @@ const addListenerFromContent = () => {
   });
 };
 
-const send = (method, data = {}) => {
-  return new Promise((resolve, reject) => {
-    resolvers.push({
-      type: method,
-      resolve,
-      reject
-    });
-    window.postMessage({ method, data }, location.origin);
-  });
-};
-
 const injectExtensionState = () => {
   return send("injectState");
 };
 
+const send = (method, data = {}) => {
+  return new Promise((resolve, reject) => {
+    resolvers.push({type: method, resolve, reject});
+    window.postMessage({method, data}, location.origin);
+  });
+};
+
 class Nabox extends EventEmitter {
+
   constructor() {
     super();
     addListenerFromContent();
@@ -60,6 +56,7 @@ class Nabox extends EventEmitter {
       return accounts;
     });
   }
+
   /**
    * @desc 发送转账交易
    * @param {object} tx
@@ -89,6 +86,7 @@ class Nabox extends EventEmitter {
    * @param {?string} tx.contractAddress 转账资产智能合约地址
    * @param {"NULS"|"NERVE"|"BSC"|"Ethereum" | "Heco"} tx.toChain 转账资产智能合约地址
    */
+  //todo 未完成
   sendCrossTransaction(tx) {
     return send("sendCrossTransaction", tx).then(res => {
       return res;
@@ -107,7 +105,7 @@ class Nabox extends EventEmitter {
    * @param {?string} tx.contractAddress 转账资产智能合约地址
    */
   signTransaction(tx) {
-    return send("signTransaction", { sign: true, ...tx }).then(res => {
+    return send("signTransaction", {sign: true, ...tx}).then(res => {
       return res;
     });
   }
@@ -124,8 +122,9 @@ class Nabox extends EventEmitter {
    * @param {?string} tx.contractAddress 转账资产智能合约地址
    * @param {"NULS"|"NERVE"|"BSC"|"Ethereum" | "Heco"} tx.toChain 转账资产智能合约地址
    */
+  //todo 未完成
   signCrossTransaction(tx) {
-    return send("signTransaction", { sign: true, ...tx }).then(res => {
+    return send("signTransaction", {sign: true, ...tx}).then(res => {
       return res;
     });
   }
@@ -139,16 +138,26 @@ class Nabox extends EventEmitter {
    * @param {string|number} data.assetId
    * @return {object}
    */
-  getBalance(data) {}
+  getBalance(data) {
+    console.log(data);
+  }
+
+  //hash签名
+  signHashTransaction(hash) {
+    return send("signHashTransaction", {hash}).then(res => {
+      return res;
+    });
+  }
 }
 
 class Inject {
+
   constructor() {
     window.nabox = new Nabox();
     //监听授权网址、网络、选中账户变化
     window.addEventListener("message", event => {
       if (event.origin === location.origin) {
-        const { type, payload } = event.data;
+        const {type, payload} = event.data;
         if (!type) return;
         // 支持绑定的事件
         const types = [
@@ -167,6 +176,7 @@ class Inject {
     window.nabox.on("session_update", (error, res)=>{console.log(error, res, "----session_update----")})
     window.nabox.on("disconnect", (error, res)=>{console.log(error, res, "----disconnect----")}) */
   }
+
   emitEvent(type, data) {
     // console.log(type, 6666)
     // let property;
@@ -195,7 +205,9 @@ class Inject {
     /* console.log(444);
     window.nabox[property] = data;
     window.nabox.emit(type, data); */
-    window.nabox.emit(type, "", { params: [data] });
+    window.nabox.emit(type, "", {params: [data]});
   }
+
 }
+
 new Inject();

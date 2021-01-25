@@ -1,7 +1,7 @@
 import ExtensionPlatform from "@/utils/extension";
 import NotificationService from "@/utils/NotificationService";
-import { getStorage, getSelectedAccount } from "@/utils/util";
-import { config } from "./config";
+import {getStorage, getSelectedAccount} from "@/utils/util";
+import {config} from "./config";
 
 class Prompt {
   constructor(routePath = "", domain = "", data = {}, responder = null) {
@@ -15,7 +15,8 @@ class Prompt {
 const typeToPath = {
   createSession: "/notification/authorization",
   sendTransaction: "/notification/send-transaction",
-  sendCrossTransaction: "/notification/send-cross-transaction"
+  sendCrossTransaction: "/notification/send-cross-transaction",
+  signHashTransaction: "/notification/hash-transaction",
 };
 
 class Background {
@@ -27,30 +28,29 @@ class Background {
     // 监听content发来的消息，处理后再返回给content
     chrome.runtime.onMessage.addListener(
       async (request, sender, sendResponse) => {
-        const { type, url, icon, data } = request;
+        const {type, url, icon, data} = request;
         if (type === "createSession") {
           this.createSession(type, url, icon, sendResponse);
         } else {
           const isAuthorized = await this.isAuthorized(url);
-          console.log(isAuthorized, 55, type)
+          console.log(isAuthorized, 55, type);
           if (isAuthorized) {
             if (type === "sendTransaction" || type === "signTransaction") {
               this.sendTransaction(type, url, data, sendResponse);
             } else if (type === "sendCrossTransaction" || type === "signCrossTransaction") {
               this.sendCrossTransaction(type, url, data, sendResponse);
+            } else if (type === 'signHashTransaction') {
+              this.signHashTransaction(type, url, data, sendResponse);
             }
           } else {
-            sendResponse({
-              type,
-              status: false,
-              payload: "Please connect the plugin first"
-            });
+            sendResponse({type, status: false, payload: "Please connect the plugin first"});
           }
         }
       }
     );
   }
 
+  //连接插件
   async createSession(type, domain, icon, sendResponse) {
     const defaultAccount = await getSelectedAccount();
     const defaultNetwork = await getStorage("network", "");
@@ -76,7 +76,7 @@ class Background {
       });
     } else {
       NotificationService.open(
-        new Prompt(typeToPath[type], domain, { icon }, async approved => {
+        new Prompt(typeToPath[type], domain, {icon}, async approved => {
           if (approved) {
             const defaultAccount = await getSelectedAccount();
             const defaultNetwork = await getStorage("network", "");
@@ -90,7 +90,7 @@ class Background {
               chain: approved
             });
             nabox.allowSites = allowSites;
-            ExtensionPlatform.set({ nabox });
+            ExtensionPlatform.set({nabox});
           } else {
             sendResponse({
               type,
@@ -102,6 +102,8 @@ class Background {
       );
     }
   }
+
+  //发送交易
   async sendTransaction(type, domain, data, sendResponse) {
     NotificationService.open(
       new Prompt(typeToPath[type], domain, data, res => {
@@ -129,6 +131,8 @@ class Background {
       })
     );
   }
+
+  //发送跨链交易
   async sendCrossTransaction(type, domain, data, sendResponse) {
     const isValidCrossChain = await this.isValidCrossChain(data.toChain, domain);
     if (isValidCrossChain) {
@@ -165,7 +169,25 @@ class Background {
       });
     }
   }
-  // 验证是否已连接插件
+
+  //hash签名
+  async signHashTransaction(type, domain, data, sendResponse) {
+    NotificationService.open(
+      new Prompt(typeToPath[type], domain, data, res => {
+        if (res) {
+          if (res.success) {
+            sendResponse({type, status: true, payload: res.data});
+          } else {
+            sendResponse({type, status: false, payload: res.data});
+          }
+        } else {
+          sendResponse({type, status: false, payload: "User rejected the request"});
+        }
+      })
+    );
+  }
+
+  // 是否授权
   async isAuthorized(domain) {
     const nabox = await getStorage("nabox", {});
     const allowSites = nabox.allowSites || [];
@@ -174,6 +196,7 @@ class Background {
     })[0];
     return Authorized;
   }
+
   // 验证跨链网络是否支持
   async isValidCrossChain(toChain, domain) {
     if (toChain) {

@@ -31,15 +31,6 @@ class Content {
 
   // 向web注入inPage.js
   injectScript() {
-    /*
-    const fs = require('fs');
-    const path = require("path");
-    console.log(fs, '===fs', path)
-    const inpageContent = fs.readFileSync(path.resolve(__dirname, "./dist/js/inPage.js"), "utf8")
-    const inpageSuffix = '//# sourceURL=' + chrome.runtime.getURL("inpage.js") + "\n";
-    const inpageBundle = inpageContent + inpageSuffix
-    injectScript(inpageBundle);
-    */
     const head = document.head || document.documentElement;
     const script = document.createElement("script");
     script.setAttribute("async", "false");
@@ -83,7 +74,8 @@ class Content {
           "sendTransaction",
           "sendCrossTransaction",
           "signTransaction",
-          "signCrossTransaction"
+          "signCrossTransaction",
+          "signHashTransaction"
         ];
         const msg = {
           type: data.method,
