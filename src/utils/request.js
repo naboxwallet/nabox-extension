@@ -14,8 +14,7 @@ export async function request(params) {
   }
   const baseUrl = config[newNetwork].BASE_URL;
   const language = localStorage.getItem("lang") === "cn" ? "CHS" : "EN";
-  const newData =
-    method === "post" ? {data: {language, ...data}} : {params: {language, ...data}};
+  const newData = method === "post" ? {data: {language, ...data}} : {params: {language, ...data}};
   return new Promise((resolve, reject) => {
     //console.log(newData);
     axios({url: baseUrl + url, method: method, ...newData}).then(

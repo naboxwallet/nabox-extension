@@ -1,9 +1,7 @@
 import zhLocale from 'element-ui/lib/locale/lang/zh-CN'
 
 const cn = {
-  /* home: {
-    extName: "NULS 钱包"
-  }, */
+
   header: {
     header1: "主网",
     header2: "测试网",
@@ -13,11 +11,12 @@ const cn = {
     header6: "导入账户",
     header7: "当前版本："
   },
+
   public: {
     confirm: "确认",
     cancel: "取消",
     symbol: "币种",
-    amount: "数量",
+    amount: "金额",
     total: "总量",
     available: "可用",
     lock: "锁定",
@@ -41,6 +40,7 @@ const cn = {
     createError: "创建账户异常，请稍后重试",
     txType: "交易类型",
   },
+
   type: {
     0: "全部交易",
     1: "共识奖励",
@@ -99,6 +99,7 @@ const cn = {
     56: "追加手续费",
     60: "已注册跨链的链信息变更",
   },
+
   login: {
     login1: "请输入密码",
     login2: "请输入由字母和数字组合的8-20位密码",
@@ -112,14 +113,15 @@ const cn = {
     login10: "账户名称",
     login11: "密码错误"
   },
+
   home: {
     home1: "应用",
-    home2: "内部转账",
+    home2: "跨链划转",
     home3: "跨链交易",
     home4: "资产总览",
     home5: "账户设置",
     home6: "总资产",
-    home7: "本链转账",
+    home7: "链内转账",
     home8: "跨链转账",
     home9: "资产",
     home10: "交易记录",
@@ -129,12 +131,14 @@ const cn = {
     home14: "断开",
     home15: "连接当前网站"
   },
+
   innerTransfer: {
     innerTransfer1: "内部转账",
     innerTransfer2: "Nabox的划转功能是通过跨链交易实现，因此需消耗交易手续费，划转到账的时间取决于进行跨链交易的两条链上的交易确认时间。",
     innerTransfer3: "从",
     innerTransfer4: "到"
   },
+
   transfer: {
     transfer1: "请输入正确的地址",
     transfer2: "请输入交易数量",
@@ -164,20 +168,24 @@ const cn = {
     transfer26: "该两个网络之间的交易暂不支持",
     transfer27: "未查询到转账资产信息，请在插件中手动添加或稍后重试",
   },
+
   transferConfirm: {
     transferConfirm1: "转账确认",
     transferConfirm2: "发送者",
     transferConfirm3: "接收者",
   },
+
   crossTxList: {
     crossTxList1: "交易记录",
     crossTxList2: "网络",
     crossTxList3: "币种",
     crossTxList4: "查询"
   },
+
   transferInfo: {
     transferInfo1: "交易详情"
   },
+
   accountManage: {
     accountManage1: "账户设置",
     accountManage2: "Keystore备份",
@@ -190,13 +198,16 @@ const cn = {
     accountManage9: "移除成功后，账户信息将被彻底删除，请确认已备份好账户私钥",
     accountManage10: "移除账户成功",
   },
+
   addAsset: {
     addAsset1: "管理资产",
     addAsset2: "请输入Token名称或合约地址",
   },
+
   assetInfo: {
     // assetInfo1:: ""
   },
+
   authorization: {
     authorization1: "请求获取钱包地址",
     authorization2: "该网站将获得以下权限",
@@ -204,10 +215,12 @@ const cn = {
     authorization4: "确认授权",
     authorization5: "请选择需要连接的网络",
   },
+
   statusType: {
     1: "已确认",
     0: "未确认"
   },
+
   crossStatusType: {
     0: "跨链交易本链未确认",
     1: "跨链交易本链已确认",

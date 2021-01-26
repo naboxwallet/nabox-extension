@@ -53,7 +53,7 @@
       <div class="info">
         <div class="info-item" v-for="(item, index) in list" :key="index">
           <span>{{ item.symbol }}</span>
-          <span>{{ item.amount }}</span>
+          <span>${{ item.amount }}</span>
           <span>{{ item.percent }}</span>
         </div>
       </div>
@@ -90,7 +90,7 @@
         showManualConnect: false,
         overviewModal: false,
         qrcodeModal: false,
-        chain: sessionStorage.getItem("chain") || "NULS",
+        chain: sessionStorage.getItem("chain") || "Ethereum",
         accountInfo: {},
         txList: [],
         txTotal: 0,
@@ -136,6 +136,8 @@
       clearInterval(this.homeSetInterval);
     },
     methods: {
+
+      //选择网络
       async changeNetwork(network) {
         const accounts = this.$store.getters.currentAccount;
         const currentAccount = accounts[network];
@@ -149,15 +151,12 @@
         const nabox = await getStorage("nabox", {});
         this.allowSites = nabox.allowSites || [];
         chrome.tabs.query({active: true, currentWindow: true}, tabs => {
-          console.log(tabs, 12345)
+          //console.log(tabs, 12345);
           if (tabs.length && tabs[0].url) {
             const url = tabs[0].url;
             const origin = url.split("://")[0] + "://" + url.split("://")[1].split("/")[0];
-            this.currentTab = {
-              domain: origin,
-              icon: tabs[0].favIconUrl
-            };
-            const exist = this.allowSites.filter(v => v.origin === origin)[0]
+            this.currentTab = {domain: origin, icon: tabs[0].favIconUrl};
+            const exist = this.allowSites.filter(v => v.origin === origin)[0];
             this.showManualConnect = exist ? false : true;
           }
         });
@@ -184,7 +183,7 @@
           if (v.origin === site) {
             index = i;
           }
-        })
+        });
         this.allowSites.splice(index, 1);
         nabox.allowSites = this.allowSites;
         ExtensionPlatform.set({nabox});
@@ -261,17 +260,9 @@
           });
           //console.log(res.data);
           this.list = res.data;
-          this.accountInfo = {
-            address,
-            total,
-            assetsList: res.data
-          };
+          this.accountInfo = {address, total, assetsList: res.data};
         } else {
-          this.$message({
-            message: res.msg,
-            type: "error",
-            duration: 1000
-          });
+          this.$message({message: res.msg, type: "error", duration: 1000});
         }
         this.assetsLoading = false;
         this.getTxList();

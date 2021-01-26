@@ -77,6 +77,11 @@ const routes = [
     component: () => import("../views/users/NewAddress.vue")
   },
   {
+    path: "/change-password",
+    name: "ChangePassword",
+    component: () => import("../views/users/ChangePassword.vue")
+  },
+  {
     path: "/authorization",
     name: "Authorization",
     component: () => import("../views/users/Authorization.vue")

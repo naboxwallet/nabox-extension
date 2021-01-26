@@ -75,7 +75,12 @@
           value: "beta",
           children: ["NULS", "NERVE", "ETH"],
           expand: false
-        }
+        },
+        /*{
+          value: "07",
+          children: ["NULS", "NERVE", "ETH"],
+          expand: false
+        }*/
       ];
     },
     methods: {}

@@ -775,7 +775,7 @@
         const toNetwork = this.toNetwork;
         let hex1 = "", hex2 = "";
         try {
-          //console.log(fromNetwork, toNetwork);
+          console.log(fromNetwork, toNetwork);
           if (fromNetwork === "NULS") {
             hex1 = await this.getNerveNulsHex("NULS"); // nuls 跨到nerve hex
             hex1 = hex1.data ? hex1.data : '';
@@ -787,7 +787,7 @@
               hex1 = await this.getNerveNulsHex("NERVE");
               if (hex1.data && !hex1.success) {
                 this.$message({
-                  message: '获取改账户资产失败!(chainId:' + hex1.data.assetsChainId + ' assetsId:' + hex1.data.assetsId + ')',
+                  message: '获取该账户资产失败!(chainId:' + hex1.data.assetsChainId + ' assetsId:' + hex1.data.assetsId + ')',
                   type: "error",
                   duration: 3000
                 });

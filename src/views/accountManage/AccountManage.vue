@@ -30,14 +30,7 @@
         </div>
         <i class="el-icon-arrow-right"></i>
       </div>
-      <!--<div class="content-item" @click="showChangePass = true">
-        <div>
-          <img src="../../assets/img/password.svg" alt=""/>
-          <span>{{ $t("accountManage.accountManage4") }}</span>
-        </div>
-        <i class="el-icon-arrow-right"></i>
-      </div>-->
-      <div v-if="accountList.length > 1" class="content-item" @click="showRemoveAccount = true">
+      <div v-if="accountList.length > 1" class="content-item" @click="showRemoveModal">
         <div class="remove-account">
           <img src="../../assets/img/del.svg" alt=""/>
           <span>{{ $t("accountManage.accountManage5") }}</span>
@@ -69,32 +62,8 @@
       </template>
     </Modal>
 
-    <Modal class="change-password" @close="modalClose" :visiable.sync="showChangePass"
-           :title="$t('accountManage.accountManage4')">
-      <el-form status-icon :model="changePsForm" :rules="changePsRuls" ref="changePsForm" label-position="top">
-        <el-form-item :label="$t('public.oldPassword')" prop="old">
-          <el-input type="password" v-model="changePsForm.old">
-          </el-input>
-        </el-form-item>
-        <el-form-item :label="$t('public.password')" prop="pass">
-          <el-input type="password" v-model="changePsForm.pass">
-          </el-input>
-        </el-form-item>
-        <el-form-item :label="$t('public.checkPassword')" prop="checkPass">
-          <el-input type="password" v-model="changePsForm.checkPass">
-          </el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="submitForm('changePsForm')">
-            {{ $t("public.confirm") }}
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </Modal>
-
-    <Modal class="remove-address" @close="modalClose"
-           :visiable.sync="showRemoveAccount"
-           :title="$t('accountManage.accountManage5')">
+    <Modal class="remove-address" @close="modalClose" :title="$t('accountManage.accountManage5')"
+           :visiable.sync="showRemoveAccount">
       <template v-if="!confirm">
         <p class="tip">
           <i class="el-icon-warning"></i>
@@ -111,7 +80,7 @@
       </template>
       <template v-else>
         <p class="tip">{{ $t("accountManage.accountManage7") }}</p>
-        <el-input v-model="password" type="password">
+        <el-input ref="removePassword" v-model="password" type="password">
         </el-input>
         <div class="btn-wrap">
           <el-button @click="showRemoveAccount = false">
@@ -130,54 +99,13 @@
 <script>
   import CommonHead from "@/components/CommonHead";
   import Modal from "@/components/Modal";
-  import {copys, checkPassword, getPri, encryptPassword} from "@/utils/util";
-  import {getAesPri_PubByPri} from "@/utils/api";
-  import ExtensionPlatform from "@/utils/extension";
+  import {copys, checkPassword, getPri} from "@/utils/util";
 
   export default {
     data() {
-      const validateOld = async (rule, value, callback) => {
-        const correct = await checkPassword(value);
-        if (value === "") {
-          callback(new Error(this.$t("login.login1")));
-        } else if (!correct) {
-          callback(new Error(this.$t("login.login11")));
-        } else {
-          callback();
-        }
-      };
-      const validatePass = (rule, value, callback) => {
-        const reg = /(?!^\d+$)(?!^[a-zA-Z]+$)^[0-9a-zA-Z]{8,20}$/;
-        if (value === "") {
-          callback(new Error(this.$t("login.login1")));
-        } else if (!reg.exec(value)) {
-          callback(new Error(this.$t("login.login2")));
-        } else {
-          callback();
-        }
-      };
-      const validatePass2 = (rule, value, callback) => {
-        if (value === "") {
-          callback(new Error(this.$t("login.login3")));
-        } else if (value !== this.changePsForm.pass) {
-          callback(new Error(this.$t("login.login4")));
-        } else {
-          callback();
-        }
-      };
       return {
         loading: false,
         pri: "",
-        changePsForm: {
-          old: "",
-          pass: "",
-          checkPass: ""
-        },
-        changePsRuls: {
-          old: [{validator: validateOld, trigger: ["blur"]}],
-          pass: [{validator: validatePass, trigger: ["blur"]}],
-          checkPass: [{validator: validatePass2, trigger: ["blur"]}]
-        },
         editName: false,
         newName: this.$store.getters.currentAccount.name,
         showBackup: false, // 备份弹窗
@@ -192,7 +120,15 @@
       Modal
     },
 
-    watch: {},
+    watch: {
+      "confirm": function (val) {
+        if (this.showRemoveAccount && val) {
+          this.$nextTick(() => {
+            this.$refs.removePassword.focus()
+          })
+        }
+      }
+    },
 
     computed: {
       account() {
@@ -204,11 +140,14 @@
     },
 
     created() {
+      //console.log(this.$goHome)
     },
 
     mounted() {
     },
-
+    destroyed() {
+      this.$goHome = false;
+    },
     methods: {
       updateAccountName() {
         if (this.newName !== this.account.name) {
@@ -239,27 +178,8 @@
         this.showBackup = false;
       },
 
-      submitForm(formName) {
-        this.$refs[formName].validate(async valid => {
-          if (valid) {
-            this.loading = true;
-            const accountList = [...this.accountList];
-            accountList.map(item => {
-              const pri = getPri(item.aesPri, this.changePsForm.old);
-              const {aesPri, pub} = getAesPri_PubByPri(this.changePsForm.pass, pri);
-              item.aesPri = aesPri;
-              item.pub = pub;
-            });
-            await this.$store.dispatch("setAccount", accountList);
-            const encryptedPassword = encryptPassword(this.changePsForm.pass);
-            ExtensionPlatform.set({password: encryptedPassword});
-            this.$message({message: this.$t("accountManage.accountManage6"), type: "success", duration: 1000});
-            this.loading = false;
-            this.showChangePass = false;
-          } else {
-            return false;
-          }
-        });
+      showRemoveModal() {
+        this.showRemoveAccount = true;
       },
 
       async removeAccount() {

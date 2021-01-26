@@ -81,11 +81,11 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 16px;
+      font-size: 12px;
       .left {
         flex: 1;
         label {
-          max-width: 80px;
+          max-width: 100px;
           padding-right: 5px;
           overflow: hidden;
           white-space: nowrap;

@@ -8,6 +8,7 @@ import {getStorage} from "./../utils/util";
 import {request} from "./../utils/request";
 
 router.beforeEach(async (to, from, next) => {
+  //console.log(to, from, next);
   const accountList = await getStorage("accountList", []);
   const password = await getStorage("password", "");
   if (!password && to.path !== "/login") {
@@ -16,6 +17,8 @@ router.beforeEach(async (to, from, next) => {
     next("/new-address");
   } else {
     if (from.path === "/") {
+      Vue.prototype.$goHome = true;
+    } else if (from.path === "/new-address") {
       Vue.prototype.$goHome = true;
     } else {
       Vue.prototype.$goHome = false;
