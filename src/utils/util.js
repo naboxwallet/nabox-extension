@@ -289,3 +289,32 @@ export const chainToSymbol = {
   BSC: "BNB",
   Heco: "HT"
 };
+
+/**
+ * data.network 当前网络 beta/main
+ * data.fromChain 来源链
+ * data.contractAddress  eth、bnb上token资产合约地址
+ * data.assetsChainId
+ * data.assetsId
+ */
+export async function getAssetNerveInfo(data) {
+  //console.log(data, 888999)
+  let result = null;
+  let params = {};
+  if (data.contractAddress) {
+    const config = JSON.parse(sessionStorage.getItem("config"));
+    const mainAsset = config[data.network][data.fromChain]; //来源链(eth,bnb,heco)主资产信息
+    params = {chainId: mainAsset.chainId, contractAddress: data.contractAddress};
+  } else {
+    params = {chainId: data.assetsChainId, assetId: data.assetsId};
+  }
+  try {
+    const res = await request({url: "/asset/nerve/chain/info", data: params});
+    if (res.code === 1000) {
+      result = res.data;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return result;
+}

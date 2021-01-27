@@ -143,7 +143,8 @@
     Minus,
     checkBalance,
     chainToSymbol,
-    Times
+    Times,
+    getAssetNerveInfo
   } from "@/utils/util";
   import {NTransfer, ETransfer, crossFee} from "@/utils/api";
   import {getContractCallData} from "@/utils/nulsContractValidate";
@@ -721,9 +722,9 @@
       // 广播授权交易
       async authorCross(txHex) {
         const res = await this.$request({
-          url: "/tx/cross/transfer",
+          url: "/tx/cross/author",
           data: {
-            chain: this.chain,
+            chain: this.fromNetwork,
             txHex
           }
         });
@@ -748,7 +749,7 @@
             this.transferLoading = true;
             this.loadingText = '交易组装中...';
             console.log(this.confirmData.fee);
-            const enoughFee = await checkBalance(this.confirmData.fee);
+            const enoughFee = true //await checkBalance(this.confirmData.fee); //todo未完成
             console.log(enoughFee);
             if (enoughFee) {
               this.transferLoading = false;
@@ -801,7 +802,7 @@
           } else {
             hex1 = await this.getCrossInHex(); // eht、bnb跨链到nerve hex
             if (toNetwork === "NULS") {
-              hex2 = await this.getNerveNulsHex("NERVE");
+              hex2 = await this.getNerveNulsHex("NERVE", true);
               hex2 = hex2.data ? hex2.data : '';
             } else if (toNetwork !== "NERVE") {
               hex2 = await this.getWithdrawalHex();
@@ -820,7 +821,7 @@
         this.transferLoading = false;
       },
 
-      async getNerveNulsHex(chain) {
+      async getNerveNulsHex(chain, checkNerveInfo = false) {
         const network = this.$store.state.network;
         const MAIN_INFO = this.getMainInfo(chain);
         const currentAccount = this.$store.getters.currentAccount[network];
@@ -833,8 +834,20 @@
           assetsChainId: this.chooseAsset.chainId,
           assetsId: this.chooseAsset.assetId,
           amount: timesDecimals(this.transferModal.amount, this.chooseAsset.decimals),
-          fee: timesDecimals(this.fee, MAIN_INFO.decimal)
+          fee: timesDecimals(crossFee, MAIN_INFO.decimal)
         };
+        if (checkNerveInfo) {
+          const params = this.chooseAsset.contractAddress
+            ? {network, fromChain: this.fromNetwork, contractAddress: this.chooseAsset.contractAddress}
+            : {network, fromChain: this.fromNetwork, assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId};
+          const assetNerveInfo = await getAssetNerveInfo(params);
+          if (assetNerveInfo) {
+            transferInfo.assetsChainId = assetNerveInfo.chainId;
+            transferInfo.assetsId = assetNerveInfo.assetId;
+          } else {
+            throw "获取该资产在nerve链上信息失败";
+          }
+        }
         let txData = {};
         if (type === 16) {
           //nuls 合约token跨链
@@ -864,16 +877,27 @@
         const transfer = new NTransfer({chain: "NERVE", network, type: 43});
         const MAIN_INFO = this.getMainInfo("NERVE");
         const currentAccount = this.$store.getters.currentAccount[network];
-        const assetInfo = this.chooseAsset.contractAddress
+        /* const assetInfo = this.chooseAsset.contractAddress
           ? {fromChain: this.fromNetwork, contractAddress: this.chooseAsset.contractAddress}
-          : {assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId};
+          : {assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId}; */
         const transferInfo = {
           from: currentAccount.NERVE,
           amount: timesDecimals(this.transferModal.amount, this.chooseAsset.decimals),
           proposalPrice: timesDecimals(Minus(this.defaultWithdrawalFee, this.normalFee), MAIN_INFO.decimal),
           fee: timesDecimals(this.normalFee, MAIN_INFO.decimal),
-          ...assetInfo
+          // ...assetInfo
         };
+        const params = this.chooseAsset.contractAddress
+          ? {network, fromChain: this.fromNetwork, contractAddress: this.chooseAsset.contractAddress}
+          : {network, fromChain: this.fromNetwork, assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId};
+        const assetNerveInfo = await getAssetNerveInfo(params)
+        if (assetNerveInfo) {
+          transferInfo.assetsChainId = assetNerveInfo.chainId;
+          transferInfo.assetsId = assetNerveInfo.assetId;
+        } else {
+          throw "获取该资产在nerve链上信息失败";
+        }
+
         const inputOuput = await transfer.inputsOrOutputs(transferInfo);
         const txData = {
           heterogeneousAddress: this.toAddress,

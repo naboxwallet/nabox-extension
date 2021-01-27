@@ -103,7 +103,7 @@ export class NTransfer {
     //console.log(pri, "===pri===")
     const {inputs, outputs, txData, remarks = ""} = data;
     // 组装交易
-    //console.log(inputs, outputs, txData, remarks, 998877, this.type)
+    console.log(inputs, outputs, txData, remarks, 998877, this.type, 666665555544444)
     const tAssemble = this.sdk.transactionAssemble(inputs, outputs, htmlEncode(remarks), this.type, txData);
     // 交易签名
     const txHex = this.sdk.transactionSerialize(pri, currentAccount.pub, tAssemble);
@@ -128,14 +128,15 @@ export class NTransfer {
       return this.callContractTransaction(data);
     } else if (this.type === 43) {
       // nerve 网络提现到eth bsc
-      const assetNerveInfo = await this.getAssetNerveInfo(data);
+      return this.WithdrawalTransaction(data);
+      /* const assetNerveInfo = await this.getAssetNerveInfo(data);
       if (assetNerveInfo) {
         data.assetsChainId = assetNerveInfo.chainId;
         data.assetsId = assetNerveInfo.assetId;
         return this.WithdrawalTransaction(data);
       } else {
         throw "获取该资产在nerve链上信息失败";
-      }
+      } */
     }
   }
 
@@ -357,7 +358,7 @@ export class NTransfer {
     let params = {};
     if (data.contractAddress) {
       const config = JSON.parse(sessionStorage.getItem("config"));
-      const mainAsset = config[this.network][data.fromChain];
+      const mainAsset = config[this.network][data.fromChain]; //来源链(eth,bnb,heco)主资产信息
       params = {chainId: mainAsset.chainId, contractAddress: data.contractAddress};
     } else {
       params = {chainId: data.assetsChainId, assetId: data.assetsId};
