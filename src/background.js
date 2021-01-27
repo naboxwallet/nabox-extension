@@ -1,7 +1,6 @@
 import ExtensionPlatform from "@/utils/extension";
 import NotificationService from "@/utils/NotificationService";
 import {getStorage, getSelectedAccount} from "@/utils/util";
-import {config} from "./config";
 
 class Prompt {
   constructor(routePath = "", domain = "", data = {}, responder = null) {

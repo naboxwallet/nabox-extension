@@ -129,7 +129,7 @@
     },
     mounted() {
       this.homeSetInterval = setInterval(() => {
-        this.update(this.chain);
+        //this.update(this.chain);
       }, 10000)
     },
     destroyed() {
@@ -231,7 +231,7 @@
           this.homeSetInterval = null;
         }
         this.homeSetInterval = setInterval(() => {
-          this.update(this.chain);
+          //this.update(this.chain);
         }, 10000)
       },
 

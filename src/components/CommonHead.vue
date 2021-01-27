@@ -18,6 +18,9 @@
     },
     methods: {
       handleBack() {
+        console.log("**back**");
+        console.log(this.backControl);
+        console.log(this.$goHome);
         if (this.backControl) {
           this.$emit("back");
         } else if (this.$goHome) {

@@ -35,7 +35,7 @@
           <el-form label-position="top" :model="transferModal" :rules="transferRules" ref="transferForm">
             <el-form-item :label="$t('public.symbol')" prop="symbol">
               <el-select v-model="transferModal.symbol" @change="changeType">
-                <el-option v-for="item in assetsList" :key="item.ids" :label="item.symbol" :value="item.ids">
+                <el-option v-for="(item,index) in assetsList" :key="index" :label="item.symbol" :value="item.ids">
                 </el-option>
               </el-select>
             </el-form-item>
@@ -141,7 +141,6 @@
     Plus,
     getSymbolUSD,
     Minus,
-    checkBalance,
     chainToSymbol,
     Times,
     getAssetNerveInfo
@@ -386,40 +385,24 @@
         network: n,
         disabled: false
       }));
+      console.log(this.networkList);
     },
 
     methods: {
 
       getKey(item) {
-        return item.contractAddress
-          ? item.contractAddress
-          : item.chainId + "-" + item.assetId;
+        return item.contractAddress ? item.contractAddress : item.chainId + "-" + item.assetId;
       },
 
       // 查询from网络资产列表
       async getAssetsList() {
-        const params = {
-          chain: this.fromNetwork,
-          address: this.fromAddress
-        };
-        const res = await this.$request({
-          url: "/wallet/address/assets",
-          data: params
-        });
+        const params = {chain: this.fromNetwork, address: this.fromAddress};
+        const res = await this.$request({url: "/wallet/address/assets", data: params});
+        //console.log(res);
         if (res.code === 1000) {
           res.data.map(v => {
             v.balance = divisionDecimals(v.balance, v.decimals);
             v.ids = this.getKey(v);
-            /* if (v.heterogeneousList && v.heterogeneousList.length) {
-              const symbolToChain = {
-                ETH: "Ethereum",
-                BNB: "BSC",
-                HT: "Heco"
-              };
-              v.heterogeneousList.map(item => {
-                item.network = symbolToChain[item];
-              });
-            } */
           });
           const defaultAsset = res.data[0];
           this.chooseAsset = defaultAsset;
@@ -432,20 +415,13 @@
 
       // 计算跨链手续费
       calTransferFee() {
-        /* this.isWithdrawal = false;
-        this.isCrossIn = false; */
         this.fee = "";
         this.extraFee = "";
         const fromNetwork = this.fromNetwork;
         const toNetwork = this.toNetwork;
-        // this.getHeterogeneousChain();
         const withdrawal = () => {
-          // this.isWithdrawal = true;
           this.calculateFee();
-          this.withdrawalTransfer = new ETransfer({
-            chain: this.toNetwork,
-            network: this.$store.state.network
-          });
+          this.withdrawalTransfer = new ETransfer({chain: this.toNetwork, network: this.$store.state.network});
         };
         if (fromNetwork === "NULS") {
           this.fee = crossFee;
@@ -461,10 +437,7 @@
           }
         } else {
           // this.isCrossIn = true;
-          this.crossInTransfer = new ETransfer({
-            chain: this.fromNetwork,
-            network: this.$store.state.network
-          });
+          this.crossInTransfer = new ETransfer({chain: this.fromNetwork, network: this.$store.state.network});
           this.getGasPrice();
           if (toNetwork === "NULS") {
             this.extraFee = crossFee;
@@ -479,6 +452,7 @@
         this.heterogeneousChain_In = {};
         this.heterogeneousChain_Out = {};
         if (!this.chooseAsset.heterogeneousList) return;
+        console.log(this.chooseAsset);
         const heterogeneousChain_In = this.chooseAsset.heterogeneousList.filter(
           v => v.chainName === this.fromNetwork
         )[0];
@@ -653,6 +627,7 @@
           }
         }
         this.networkList = networkList;
+        console.log(this.networkList);
       },
 
       async validateParameter() {
@@ -839,7 +814,12 @@
         if (checkNerveInfo) {
           const params = this.chooseAsset.contractAddress
             ? {network, fromChain: this.fromNetwork, contractAddress: this.chooseAsset.contractAddress}
-            : {network, fromChain: this.fromNetwork, assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId};
+            : {
+              network,
+              fromChain: this.fromNetwork,
+              assetsChainId: this.chooseAsset.chainId,
+              assetsId: this.chooseAsset.assetId
+            };
           const assetNerveInfo = await getAssetNerveInfo(params);
           if (assetNerveInfo) {
             transferInfo.assetsChainId = assetNerveInfo.chainId;
@@ -889,7 +869,12 @@
         };
         const params = this.chooseAsset.contractAddress
           ? {network, fromChain: this.fromNetwork, contractAddress: this.chooseAsset.contractAddress}
-          : {network, fromChain: this.fromNetwork, assetsChainId: this.chooseAsset.chainId, assetsId: this.chooseAsset.assetId};
+          : {
+            network,
+            fromChain: this.fromNetwork,
+            assetsChainId: this.chooseAsset.chainId,
+            assetsId: this.chooseAsset.assetId
+          };
         const assetNerveInfo = await getAssetNerveInfo(params)
         if (assetNerveInfo) {
           transferInfo.assetsChainId = assetNerveInfo.chainId;
