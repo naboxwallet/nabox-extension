@@ -193,7 +193,7 @@
       this.assetChainId = assetChainId;
       this.assetId = assetId;
       this.contractAddress = contractAddress;
-      const config = JSON.parse(sessionStorage.getItem("config"));
+      const config = JSON.parse(localStorage.getItem("config"));
       this.MAIN_INFO = config[this.$store.state.network][this.chain];
       console.log(this.MAIN_INFO, 999);
       this.feeSymbol = chainToSymbol[this.chain];
@@ -251,14 +251,14 @@
 
       async getGasPrice() {
         this.feeLoading = true;
-        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
+        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "35000";
         this.fee = await this.eTransfer.getGasPrice(gasLimit);
         this.feeLoading = false;
       },
 
       async getSpeedUpFee() {
         this.feeLoading = true;
-        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
+        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "35000";
         this.fee = await this.eTransfer.getSpeedUpFee(gasLimit);
         this.feeLoading = false;
       },
@@ -318,7 +318,7 @@
           this.transferModal.gas = res.data.gas;
           this.contractCallData = res.data.contractCallData;
         } else {
-          this.$message({message: res.msg, type: "error", duration: 3000});
+          this.$message({message: res.msg, type: "warning", duration: 3000});
         }
       },
 
@@ -392,10 +392,10 @@
           if (res.code === 1000) {
             this.imputedContractCallGas(sender, value, contractAddress, methodName, methodDesc, args)
           } else {
-            this.$message({message: this.$t("transfer.transfer10") + res.msg, type: "error", duration: 3000});
+            this.$message({message: this.$t("transfer.transfer10") + res.msg, type: "warning", duration: 3000});
           }
         } catch (e) {
-          this.$message({message: this.$t("transfer.transfer10"), type: "error", duration: 3000});
+          this.$message({message: this.$t("transfer.transfer10"), type: "warning", duration: 3000});
         }
       },
 
@@ -435,10 +435,10 @@
               args: newArgs
             };
           } else {
-            this.$message({message: this.$t("transfer.transfer12") + res.msg, type: "error", duration: 3000});
+            this.$message({message: this.$t("transfer.transfer12") + res.msg, type: "warning", duration: 3000});
           }
         } catch (e) {
-          this.$message({message: this.$t("transfer.transfer12"), type: "error", duration: 3000});
+          this.$message({message: this.$t("transfer.transfer12"), type: "warning", duration: 3000});
         }
       },
 
@@ -502,7 +502,7 @@
           } catch (e) {
             console.error("签名失败" + e);
             this.loading = false;
-            this.$message({type: "error", message: e, duration: 2000});
+            this.$message({type: "warning", message: e, duration: 2000});
           }
         } else {
           try {
@@ -517,7 +517,7 @@
           } catch (e) {
             console.error("组装交易失败" + e);
             this.loading = false;
-            this.$message({type: "error", message: e, duration: 2000});
+            this.$message({type: "warning", message: e, duration: 2000});
           }
         }
         if (txHex) {
@@ -533,13 +533,14 @@
         const params = {chain: this.chain, address: this.transferModal.from, txHex, ...assetInfo};
         const res = await this.$request({url: "/tx/transfer", method: "post", data: params});
         this.loading = false;
+        this.showConfirm = false;
         if (res.code === 1000) {
           this.$message({type: "success", message: this.$t("transfer.transfer13"), duration: 2000});
           setTimeout(() => {
             this.$router.push("/");
           }, 1500);
         } else {
-          this.$message({type: "error", message: res.msg, duration: 3000});
+          this.$message({type: "warning", message: res.msg, duration: 3000});
         }
       },
 
@@ -551,7 +552,7 @@
         if (res.code === 1000) {
           this.$message({type: "success", message: this.$t("transfer.transfer13"), duration: 3000});
         } else {
-          this.$message({type: "error", message: res.msg, duration: 3000});
+          this.$message({type: "warning", message: res.msg, duration: 3000});
         }
       }
 

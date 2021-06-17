@@ -3,7 +3,8 @@ import copy from "copy-to-clipboard";
 import ExtensionPlatform from "./extension";
 import sdk from "nerve-sdk-js/lib/api/sdk";
 import {request} from "./request";
-import {runEnvironment} from "@/config";
+import store from "./../store";
+
 
 let CryptoJS = require("crypto-js");
 
@@ -57,6 +58,39 @@ export function divisionDecimals(nu, decimals) {
   return new BigNumber(Division(nu, Power(decimals)))
     .toFormat()
     .replace(/[,]/g, "");
+}
+
+/**
+ * 保留指定小数位数
+ * @param val 要处理的数据，Number | String
+ * @param len 保留小数位数，位数不足时，以0填充
+ * @param side 1|-1 对应 入|舍
+ * @returns {string|number}
+ */
+export function tofix(val, len, side) {
+  const numval = Number(val);
+  if (isNaN(numval)) return 0;
+  const str = val.toString();
+  if (str.indexOf('.') > -1) {
+    let numArr = str.split('.');
+    if (numArr[1].length > len) {
+      let tempnum = numval * Math.pow(10, len);
+      if (!side) {
+        return Number(val).toFixed(len)
+      } else if (side === 1) {
+        if (tempnum < 1) return (1 / Math.pow(10, len));
+        return (Math.ceil(tempnum) / Math.pow(10, len)).toFixed(len)
+      } else if (side === -1) {
+        return (Math.floor(tempnum) / Math.pow(10, len)).toFixed(len)
+      } else {
+        return Number(val.toFixed(len))
+      }
+    } else {
+      return Number(str).toFixed(len)
+    }
+  } else {
+    return Number(val).toFixed(len)
+  }
 }
 
 // 把html转义成HTML实体字符
@@ -202,15 +236,18 @@ export function getOrigin(chain, network) {
       main: "https://bscscan.com",
     },
     Heco: {
-      beta: "https://scan-testnet.hecochain.com",
+      beta: "https://testnet.hecoinfo.com",
       main: "https://scan.hecochain.com",
     },
+    OKExChain: {
+      beta: "https://www.oklink.com/okexchain-test",
+      main: "https://www.oklink.com/okexchain",
+    }
   };
   return origins[chain][network];
 }
 
 export async function getStorage(key, defaultValue) {
-  console.log(key, defaultValue);
   return (await ExtensionPlatform.get(key))[key] || defaultValue;
 }
 
@@ -246,8 +283,8 @@ export async function checkBalance(fee) {
   let enough = true;
   const accountList = await getStorage("accountList", []);
   const currentAccount = accountList.filter(account => account.selection)[0];
-  const network = await getStorage("network", runEnvironment);
-  const config = JSON.parse(sessionStorage.getItem("config"));
+  const network = await getStorage("network", store.state.network);
+  const config = JSON.parse(localStorage.getItem("config"));
   const chains = Object.keys(symbolToChain);
   for (let i = 0; i < chains.length; i++) {
     const symbol = chains[i];
@@ -269,6 +306,7 @@ export async function checkBalance(fee) {
 }
 
 async function getBalance(chain, address, chainId, assetId) {
+  //console.log(chain, address, chainId, assetId, "getBalance");
   let balance = 0;
   try {
     const res = await request({url: "/wallet/address/asset", data: {chain, address, chainId, assetId, refresh: true}});
@@ -282,12 +320,18 @@ async function getBalance(chain, address, chainId, assetId) {
   return balance;
 }
 
+export async function getBalances(chain, address, chainId, assetId) {
+  return getBalance(chain, address, chainId, assetId)
+}
+
+
 export const chainToSymbol = {
   NULS: "NULS",
   NERVE: "NVT",
   Ethereum: "ETH",
   BSC: "BNB",
-  Heco: "HT"
+  Heco: "HT",
+  OKExChain: "OKT"
 };
 
 /**
@@ -302,14 +346,16 @@ export async function getAssetNerveInfo(data) {
   let result = null;
   let params = {};
   if (data.contractAddress) {
-    const config = JSON.parse(sessionStorage.getItem("config"));
+    const config = JSON.parse(localStorage.getItem("config"));
     const mainAsset = config[data.network][data.fromChain]; //来源链(eth,bnb,heco)主资产信息
     params = {chainId: mainAsset.chainId, contractAddress: data.contractAddress};
   } else {
     params = {chainId: data.assetsChainId, assetId: data.assetsId};
   }
+  //console.log(params);
   try {
     const res = await request({url: "/asset/nerve/chain/info", data: params});
+    //console.log(res);
     if (res.code === 1000) {
       result = res.data;
     }
@@ -317,4 +363,34 @@ export async function getAssetNerveInfo(data) {
     console.error(e);
   }
   return result;
+}
+
+/**
+ * @disc: 数组去重
+ * @params:
+ * @date: 2021-03-16 15:38
+ * @author: Wave
+ */
+export function arrDistinctByProp(arr, prop) {
+  let obj = {};
+  return arr.reduce(function (preValue, item) {
+    obj[item[prop]] ? '' : obj[item[prop]] = true && preValue.push(item);
+    return preValue
+  }, [])
+}
+
+
+// 根据已授权账户，返回当前连接的授权账户
+export async function getCurrentAuthAccount(approvedList) {
+  const nabox = await getStorage("nabox", {});
+  const defaultAccount = await getSelectedAccount();
+  const { chain = "Ethereum", chainId = "0x1", network = "main" } = nabox;
+  // const approvedList = nabox.
+  const defaultAddress = defaultAccount[network][chain];
+  const payload = { address: null, chainId }
+  const account = approvedList.filter(item => item.address === defaultAddress)[0] || approvedList[0];
+  if (account) {
+    payload.address = account.address || null
+  }
+  return payload
 }

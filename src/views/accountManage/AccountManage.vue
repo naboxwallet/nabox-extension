@@ -7,10 +7,10 @@
       <div class="account-name">
         <template v-if="!editName">
           <span class="overflow">{{ account.name }}</span>
-          <img src="../../assets/img/edit.svg" @click="editName = true"/>
+          <img src="../../assets/img/edit.svg" @click="showEditName"/>
         </template>
         <template v-else>
-          <el-input v-model="newName">
+          <el-input ref="editNameInput" @keyup.enter.native="updateAccountName" v-model="newName">
           </el-input>
           <i class="el-icon-check" @click="updateAccountName"></i>
           <i class="el-icon-close" @click="editName = false"></i>
@@ -44,7 +44,8 @@
            :title="$t('accountManage.accountManage3')">
       <template v-if="!confirm">
         <p class="tip">{{ $t("accountManage.accountManage7") }}</p>
-        <el-input v-model="password" type="password"></el-input>
+        <el-input v-model="password" type="password">
+        </el-input>
         <div class="btn-wrap">
           <el-button @click="showBackup = false">
             {{ $t("public.cancel") }}
@@ -149,6 +150,21 @@
       this.$goHome = false;
     },
     methods: {
+
+      /**
+       * @disc: 显示编辑账户名
+       * @params:
+       * @date: 2021-01-28 16:55
+       * @author: Wave
+       */
+      showEditName() {
+        this.editName = true;
+        this.$nextTick(() => {
+          this.$refs.editNameInput.focus()
+        })
+      },
+
+      //更新账户名
       updateAccountName() {
         if (this.newName !== this.account.name) {
           const accountList = [...this.accountList];
@@ -168,7 +184,7 @@
           this.pri = getPri(this.account.aesPri, this.password);
           this.confirm = true;
         } else {
-          this.$message({message: this.$t("accountManage.accountManage8"), type: "error", duration: 2000});
+          this.$message({message: this.$t("accountManage.accountManage8"), type: "warning", duration: 2000});
         }
       },
 

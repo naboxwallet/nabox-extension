@@ -2,22 +2,26 @@
   <div class="add-asset">
     <common-head>{{ $t("addAsset.addAsset1") }}</common-head>
     <div class="content" v-loading="loading">
-      <el-input v-model="searchVal" :placeholder="$t('addAsset.addAsset2')" @change="searchAsset">
+      <el-input v-model="searchVal" :placeholder="placeholderInfo" @input="searchAsset">
       </el-input>
       <ul>
         <li v-for="item in assetsList" :key="getKey(item)">
-          <!--<img :src="item.icon"/>-->
-          <el-image :src="item.icon">
+          <el-image class="fl" :src="'https://nuls-cf.oss-us-west-1.aliyuncs.com/icon/'+item.symbol+'.png'">
           <span slot="error" class="image-slot">
-            <i class="el-icon-picture-outline"></i>
+            <!--<i class="el-icon-picture-outline"></i>-->
+            <img width="26" src="https://scan.nerve.network/dist/img/commonIcon.bbc291f8.png">
           </span>
           </el-image>
 
           <div class="asset-info">
-            <p>{{ item.symbol }}</p>
-            <span>{{ superLong(item.contractAddress) }}</span>
+            <p>
+              {{ item.symbol }}
+              <span v-show="item.registerChain" style="font-size: 12px;color: #bac0d3;">({{item.registerChain}})</span>
+            </p>
+            <span class="clicks" @click="copy(item.contractAddress)">{{ superLong(item.contractAddress) }}</span>
           </div>
-          <el-checkbox v-model="item.select" @change="focusAsset(item)"
+          <el-checkbox v-model="item.select"
+                       @change="focusAsset(item)"
                        :disabled="item.configType === 1 || item.configType === 2">
           </el-checkbox>
         </li>
@@ -33,14 +37,15 @@
 
 <script>
   import CommonHead from "@/components/CommonHead";
-  import {superLong} from "@/utils/util";
+  import {superLong, copys} from "@/utils/util";
 
   export default {
     data() {
       return {
         searchVal: "",
         assetsList: [],
-        loading: false
+        loading: false,
+        placeholderInfo: '',
       };
     },
 
@@ -51,12 +56,20 @@
     computed: {},
 
     created() {
+      //console.log(this.$route.query.chain);
+      if (this.$route.query.chain === 'NERVE') {
+        this.placeholderInfo = this.$t('addAsset.addAsset3')
+      } else {
+        this.placeholderInfo = this.$t('addAsset.addAsset2')
+      }
       const visibleAssets = JSON.parse(sessionStorage.getItem("visibleAssets"));
       visibleAssets.map(v => {
         v.select = true;
       });
       this.selectedAssets = visibleAssets;
       this.assetsList = visibleAssets;
+      //console.log(this.assetsList)
+      //https://nuls-cf.oss-us-west-1.aliyuncs.com/icon/NULS.png
     },
     beforeDestroy() {
       sessionStorage.removeItem("visibleAssets");
@@ -100,20 +113,30 @@
 
       async focusAsset(item) {
         const {chain, address} = this.$route.query;
-        const assetInfo = item.contractAddress ?
-          {contractAddress: item.contractAddress} : {chainId: item.chainId, assetId: item.assetId};
+        const assetInfo = {contractAddress: item.contractAddress, chainId: item.chainId, assetId: item.assetId};
         let newData = {chain, address, focus: item.select, ...assetInfo};
         //console.log(newData);
         const res = await this.$request({url: "/wallet/address/asset/focus", data: newData});
         //console.log(res);
         if (res.code !== 1000) {
-          this.$message({type: "error", message: res.data});
+          this.$message({type: "warning", message: res.data});
         }
       },
 
       submit() {
         this.$router.back();
-      }
+      },
+
+      /**
+       * @disc: 复制功能
+       * @params:
+       * @date: 2021-03-04 14:19
+       * @author: Wave
+       */
+      copy(str) {
+        copys(str);
+        this.$message({message: this.$t("public.copySuccess"), type: "success", duration: 1000});
+      },
 
     }
   };
@@ -147,7 +170,9 @@
         flex: 1;
       }
       &:hover {
-        // background-color: #f2f3f4;
+        .clicks {
+          background-color: #DCDFE6;
+        }
       }
       &:last-child {
         border-bottom: none;

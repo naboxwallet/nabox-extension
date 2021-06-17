@@ -1,10 +1,11 @@
 {
   "manifest_version": 2,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Nabox Wallet",
   "description": "__MSG_pluginDesc__",
   "default_locale": "en",
   "permissions": [
+    "management",
     "activeTab",
     "storage",
     "unlimitedStorage",
@@ -12,15 +13,16 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": [
-      "js/background.js"
-    ],
-    "persistent": true
+    "page": "background.html"
   },
-  "content_scripts":[
+  "content_scripts": [
     {
-      "matches":["<all_urls>"],
-      "js": ["js/content-script.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "js/content-script.js"
+      ],
       "run_at": "document_start",
       "all_frames": true
     }
@@ -30,13 +32,13 @@
     "default_popup": "popup.html",
     "default_title": "Nabox Wallet",
     "default_icon": {
-      "19": "icons/logo19.png",
-      "38": "icons/logo38.png"
+      "19": "icons/logo-19.png",
+      "38": "icons/logo-38.png"
     }
   },
   "icons": {
-    "19": "icons/logo19.png",
-    "38": "icons/logo38.png"
+    "16": "icons/icon-16.png",
+    "128": "icons/icon-128.png"
   },
   "web_accessible_resources": [
     "js/inPage.js"

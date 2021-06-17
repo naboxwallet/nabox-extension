@@ -3,42 +3,30 @@
     <div class="setting-wrap" v-show="visiable">
       <div class="mask" @click="close"></div>
       <div class="settings-modal shadow">
-        <div class="common-pd setting-item" @click="viewOnBrowser">
-          展开视图
-        </div>
         <div class="common-pd switch-account border">
-          {{ $t("header.header4") }}
-          <el-button type="warning" class="fr" @click="$router.push('/lock')">
+          <span class="clicks" @click="viewOnBrowser">{{$t('public.onTheView')}}</span>
+          <el-button type="warning" class="fr" @click="lock">
             {{ $t("public.lock") }}
           </el-button>
         </div>
-        <div class="border">
-          <div class="account setting-item common-pd" :class="{ active: item.selection }"
-               v-for="item in accountList" :key="item.pub" @click="switchAccount(item.pub)">
-            <p class="border">
-              <span class="circle"></span>
-              <span class="overflow">{{ item.name }}</span>
-              <font>${{ item["balance_" + $store.state.network] }}</font>
-            </p>
-          </div>
-        </div>
-        <div class="border">
-          <div class="setting-item common-pd" @click="newAddress('create')">
-            <div class="border">{{ $t("header.header5") }}</div>
-          </div>
-          <div class="setting-item common-pd" @click="newAddress('import')">
-            <div class="border">{{ $t("header.header6") }}</div>
-          </div>
+        <div class="border cb">
           <div class="setting-item common-pd" @click="changePassword()">
             <div>{{ $t("accountManage.accountManage4") }}</div>
           </div>
         </div>
-        <div class="common-pd setting-item border" @click="switchLang">
-          {{ $t("header.header3") }}
-        </div>
-        <div class="common-pd version setting-item">
-          {{ $t("header.header7") }}{{ version }}
-        </div>
+        <div class="common-pd setting-item border" @click="switchLang">{{ $t("header.header3") }}</div>
+        <el-collapse v-model="activeNames" class="using">
+          <el-collapse-item :title="$t('home.home16')" name="1">
+            <div class="u-list" @click="toUrl('https://nabox.io')">{{$t('home.home17')}}</div>
+            <div class="u-list" @click="toUrl('https://forms.gle/XFMrcYQLhapYyLaSA')">{{$t('home.home18')}}</div>
+            <div class="u-list" @click="toUrl('https://bbs.nuls.io/t/nabox-chrome-plugin-issues-nabox/4711')">
+              {{$t('home.home19')}}
+            </div>
+            <div class="u-list" @click="toUrl('https://discord.com/invite/mQVXZJXMkn')">Discord</div>
+          </el-collapse-item>
+        </el-collapse>
+
+        <div class="common-pd version setting-item">{{ $t("header.header7") }}{{ version }}</div>
       </div>
     </div>
   </transition>
@@ -46,6 +34,7 @@
 
 <script>
   import axios from "axios";
+  import {getStorage} from "@/utils/util";
   import ExtensionPlatform from "@/utils/extension";
 
   export default {
@@ -53,6 +42,7 @@
       return {
         currentAccount: 0,
         version: "",
+        activeNames: "",
       };
     },
     props: {
@@ -60,23 +50,21 @@
     },
     computed: {
       accountList() {
+        //console.log(this.$store.state.accountList,"setting");
         return this.$store.state.accountList;
       }
     },
     mounted() {
       this.version = chrome.app.getDetails().version;
-      // console.log(chrome.runtime.getManifest(), 666)
-      // this.getVersion();
     },
     methods: {
 
+      //获取版本号
       getVersion() {
         axios.get(chrome.extension.getURL("manifest.json")).then(res => {
           if (res.data.app_version) {
             this.version = res.data.app_version;
-            console.log(chrome.app.getDetails(), 666);
             const latest = chrome.app.getDetails().version;
-            console.log(latest, 888);
             if (latest !== res.data.app_version) {
               this.update = true;
             }
@@ -84,6 +72,7 @@
         });
       },
 
+      //切换账户
       async switchAccount(pub) {
         const accountList = [...this.accountList];
         accountList.map(item => {
@@ -100,6 +89,7 @@
         ExtensionPlatform.openExtensionInBrowser();
       },
 
+      //选择语言
       switchLang() {
         const lang = this.$i18n.locale === "cn" ? "en" : "cn";
         this.$i18n.locale = lang;
@@ -108,9 +98,11 @@
       },
 
       close() {
+        this.activeNames = '';
         this.$emit("update:visiable", false);
       },
 
+      //创建地址
       newAddress(type) {
         this.close();
         this.$router.push({
@@ -119,6 +111,7 @@
         });
       },
 
+      //修改密码
       changePassword() {
         this.close();
         this.$router.push({
@@ -126,6 +119,21 @@
         });
       },
 
+      //问题反馈
+      toUrl(url) {
+        this.close();
+        window.open(url);
+      },
+
+      //锁定
+      async lock() {
+        const nabox = await getStorage("nabox", {});
+        nabox.lock = true;
+        ExtensionPlatform.set({nabox});
+        this.$router.push({
+          path: "/lock",
+        });
+      },
 
     }
   };
@@ -204,6 +212,32 @@
       }
       &:last-of-type .border {
         border: none;
+      }
+    }
+    .using {
+      border-top: 0;
+      .el-collapse-item {
+        .el-collapse-item__header {
+          margin: 0 0 0 20px;
+          font-family: DINOT, Roboto;
+          color: #3a3c44;
+          font-weight: 400;
+          font-size: 14px;
+        }
+        .el-collapse-item__content {
+          padding: 0;
+          .u-list {
+            font-family: DINOT, Roboto;
+            color: #3a3c44;
+            font-weight: 400;
+            margin: 0 20px;
+            padding: 0 40px;
+            border-bottom: 1px solid #e9ebf3;
+            cursor: pointer;
+            line-height: 30px;
+          }
+        }
+
       }
     }
   }

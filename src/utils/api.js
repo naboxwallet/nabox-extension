@@ -52,15 +52,16 @@ export function getAesPri_PubByPri(password, pri) {
 function getAddress(type = "password", pri, pub, network = "beta") {
   let NULS, NERVE, Ethereum;
   const nPub = type === "password" ? pub : null;
-  const config = JSON.parse(sessionStorage.getItem("config"));
+  const config = JSON.parse(localStorage.getItem("config"));
   if (!config.beta || !config.main) {
     throw "未获取到链配置，创建账户失败";
   }
   const configInfo = config[network];
+  console.log(configInfo, "configInfo");
   NULS = sdk.getStringAddress(configInfo.NULS.chainId, pri, nPub, configInfo.NULS.prefix);
   NERVE = sdk.getStringAddress(configInfo.NERVE.chainId, pri, nPub, configInfo.NERVE.prefix);
   Ethereum = ethers.utils.computeAddress(ethers.utils.hexZeroPad(ethers.utils.hexStripZeros("0x" + pub), 33));
-  return {NULS, NERVE, Ethereum, BSC: Ethereum, Heco: Ethereum};
+  return {NULS, NERVE, Ethereum, BSC: Ethereum, Heco: Ethereum, OKExChain: Ethereum};
 }
 
 //验证地址
@@ -69,7 +70,7 @@ export function validateAddress(account) {
     ethers.utils.getAddress(account);
     return true;
   } catch (error) {
-    console.error("地址校验失败: " + error);
+    console.info(error);
   }
   return false;
 }
@@ -94,23 +95,32 @@ export class NTransfer {
     this.sdk = nSdk[this.chain] || nerve; // nerve nuls sdk
   }
 
-  async getTxHex(data) {
-    const encryptPassword = (await ExtensionPlatform.get("password")).password;
-    const password = decryptPassword(encryptPassword);
-    const accountList = (await ExtensionPlatform.get("accountList")).accountList;
-    const currentAccount = accountList.filter(v => v.selection)[0];
-    const pri = getPri(currentAccount.aesPri, password);
-    //console.log(pri, "===pri===")
+  async getTxHex(data, priHex, pubKey) {
+    let pri, pub;
+    if (priHex) {
+      pri = priHex
+      pub = pubKey
+    } else {
+      const encryptPassword = (await ExtensionPlatform.get("password")).password;
+      const password = decryptPassword(encryptPassword);
+      const accountList = (await ExtensionPlatform.get("accountList")).accountList;
+      const currentAccount = accountList.filter(v => v.selection)[0];
+      pri = getPri(currentAccount.aesPri, password);
+      pub = currentAccount.pub
+    }
+    //console.log(pri, "===pri===");
     const {inputs, outputs, txData, remarks = ""} = data;
     // 组装交易
-    console.log(inputs, outputs, txData, remarks, 998877, this.type, 666665555544444)
+    //console.log(inputs, outputs);
     const tAssemble = this.sdk.transactionAssemble(inputs, outputs, htmlEncode(remarks), this.type, txData);
+    //console.log(tAssemble,"------------" ,tAssemble.txSerialize().toString('hex'), "tAssemble");
     // 交易签名
-    const txHex = this.sdk.transactionSerialize(pri, currentAccount.pub, tAssemble);
+    const txHex = this.sdk.transactionSerialize(pri, pub, tAssemble);
     return txHex;
   }
 
   async inputsOrOutputs(data) {
+    //console.log(this.type, data);
     if (!this.type) {
       throw "获取交易类型失败";
     }
@@ -146,7 +156,7 @@ export class NTransfer {
     //转账资产nonce
     const nonce = await this.getNonce(transferInfo);
     if (!nonce) throw "获取nonce值失败";
-    const config = JSON.parse(sessionStorage.getItem("config"));
+    const config = JSON.parse(localStorage.getItem("config"));
     const mainAsset = config[this.network][this.chain];
     if (mainAsset.chainId === transferInfo.assetsChainId && mainAsset.assetId === transferInfo.assetsId) {
       // 转账资产为本链主资产, 将手续费和转账金额合成一个input
@@ -195,7 +205,7 @@ export class NTransfer {
   // nuls nerve跨链转账input output
   async crossChainTransaction(transferInfo) {
     const {inputs, outputs} = await this.transferTransaction(transferInfo);
-    const CROSS_INFO = JSON.parse(sessionStorage.getItem("config"))[this.network]["NULS"];
+    const CROSS_INFO = JSON.parse(localStorage.getItem("config"))[this.network]["NULS"];
     if (this.chain === "NERVE") {
       // nerve资产跨链到nuls,要收取nuls手续费
       let isNULS = false;
@@ -214,8 +224,8 @@ export class NTransfer {
           assetsChainId: CROSS_INFO.chainId,
           assetsId: CROSS_INFO.assetId
         });
-        console.log("nonce*************");
-        console.log(nonce);
+        //console.log(nonce,"*************");
+
         if (!nonce) {
           return {
             success: false,
@@ -237,7 +247,8 @@ export class NTransfer {
 
   // 调用合约交易
   async callContractTransaction(transferInfo) {
-    // const balanceInfo = await getBaseAssetInfo(CROSS_INFO.chainId, CROSS_INFO.assetId, this.from);
+    //console.log("callContractTransaction:");
+    //console.log(transferInfo);
     const nonce = await this.getNonce(transferInfo);
     const defaultFee = timesDecimals(0.001, 8);
     const inputs = [
@@ -266,7 +277,7 @@ export class NTransfer {
   // nerve 提现
   async WithdrawalTransaction(transferInfo) {
     //console.log(transferInfo, 8888);
-    const config = JSON.parse(sessionStorage.getItem("config"));
+    const config = JSON.parse(localStorage.getItem("config"));
     const mainAsset = config[this.network][this.chain];
     const nonce = await this.getNonce(transferInfo);
     const mainAssetNonce = await this.getNonce({
@@ -332,17 +343,18 @@ export class NTransfer {
   }
 
   async getNonce(info) {
+    //console.log(info,"getNonce");
     try {
-      const res = await request({
-        url: "/wallet/address/asset",
-        data: {
-          chain: this.chain,
-          address: info.from,
-          chainId: info.assetsChainId,
-          assetId: info.assetsId,
-          refresh: true
-        }
-      });
+      let data = {
+        chain: this.chain,
+        address: info.from,
+        chainId: info.assetsChainId,
+        assetId: info.assetsId,
+        refresh: true
+      };
+      //console.log(data);
+      const res = await request({url: "/wallet/address/asset", data: data});
+      //console.log(res);
       if (res.code === 1000) {
         return res.data.nonce;
       }
@@ -357,7 +369,7 @@ export class NTransfer {
     let result = null;
     let params = {};
     if (data.contractAddress) {
-      const config = JSON.parse(sessionStorage.getItem("config"));
+      const config = JSON.parse(localStorage.getItem("config"));
       const mainAsset = config[this.network][data.fromChain]; //来源链(eth,bnb,heco)主资产信息
       params = {chainId: mainAsset.chainId, contractAddress: data.contractAddress};
     } else {
@@ -373,6 +385,58 @@ export class NTransfer {
     }
     return result;
   }
+
+  //交易签名
+  async transactionAssemble(data, priHex, pubKey) {
+    let pri, pub
+    if (priHex) {
+      pri = priHex
+      pub = pubKey
+    } else {
+      const encryptPassword = (await ExtensionPlatform.get("password")).password;
+      const password = decryptPassword(encryptPassword);
+      const accountList = (await ExtensionPlatform.get("accountList")).accountList;
+      //console.log(data,accountList);
+      let currentAccount = {};
+      if (data.id) {
+        currentAccount = accountList.filter(v => v.id === data.id)[0];
+      } else {
+        currentAccount = accountList.filter(v => v.selection)[0];
+      }
+      //console.log(currentAccount);
+      pri = getPri(currentAccount.aesPri, password);
+      pub = currentAccount.pub
+    }
+    
+    const {inputs, outputs, txData, remarks = ""} = data;
+    // 组装交易
+    const tAssemble = this.sdk.transactionAssemble(inputs, outputs, htmlEncode(remarks), this.type, txData);
+    // 交易签名
+    const txHex = this.sdk.transactionSerialize(pri, pub, tAssemble);
+    return txHex;
+  }
+
+  /**
+   * @desc 签名message
+   * @param {string} dataHex // 签名内容
+   * @param {string} pri
+   */
+  async signMessage(dataHex, priHex) {
+    function dataToHex(data) {
+      try {
+          let _data = Buffer.from(data, "hex").toString("hex");
+          let isHex = _data != '' && _data === data;
+          if (isHex) {
+              return data;
+          }
+          return Buffer.from(data, "utf8").toString("hex");
+      } catch (e) {
+          return Buffer.from(data, "utf8").toString("hex");
+      }
+    }
+    dataHex = dataToHex(dataHex)
+    return sdk.signature(dataHex, priHex)
+  }
 }
 
 const RPC_URL = {
@@ -383,6 +447,10 @@ const RPC_URL = {
   Heco: {
     ropsten: "https://http-testnet.hecochain.com",
     homestead: "https://http-mainnet.hecochain.com"
+  },
+  OKExChain: {
+    ropsten: "https://exchaintestrpc.okex.org",
+    homestead: "https://exchainrpc.okex.org"
   }
 };
 
@@ -400,7 +468,7 @@ export class ETransfer {
     if (!props.chain) {
       throw "未获取到网络，组装交易失败";
     }
-    const validChains = ["Ethereum", "BSC", "Heco"];
+    const validChains = ["Ethereum", "BSC", "Heco", "OKExChain"];
     const validNetwork = ["beta", "main"];
     if (validChains.indexOf(props.chain) === -1) {
       throw "invalid chain";
@@ -422,16 +490,24 @@ export class ETransfer {
     }
   }
 
-  decodeData(data) {
-    const iface = new ethers.utils.Interface(["function transfer(address recipient, uint256 amount)"]);
+  decodeData(data, fromNerve) {
+    const commonTransferABI = ["function transfer(address recipient, uint256 amount)"] // eth等链发起的交易
+    // CROSS_OUT_ABI nerve链发起的跨链转入交易
+    const ABI = fromNerve ? CROSS_OUT_ABI : commonTransferABI
+    // const iface = new ethers.utils.Interface(["function transfer(address recipient, uint256 amount)"]); 
+    const iface = new ethers.utils.Interface(ABI); 
+    console.log(iface, 999, data)
     const txInfo = iface.parseTransaction({data});
     //const decode = iface.functions["transfer(address,uint256)"].decode(data);
     // const decode = iface.decodeFunctionData("transfer(address,uint)", data);
+    console.log(txInfo, 444)
     if (txInfo) {
-      //console.log(txInfo, "info");
-      return {to: txInfo.args[0], amount: txInfo.args[1].toString()};
+      const amount = txInfo.args[1].toString();
+      const to = fromNerve ? txInfo.args[2] : txInfo.args[0]
+      if (to === "0x0000000000000000000000000000000000000000") return null; // nerve发起的跨链转入异构链主资产
+      return { to, amount }
     }
-    return null;
+    return null
   }
 
   formatEther(value) {
@@ -470,12 +546,21 @@ export class ETransfer {
     }
   }
 
-  async getWallet() {
-    const encryptPassword = (await ExtensionPlatform.get("password")).password;
-    const password = decryptPassword(encryptPassword);
-    const accountList = (await ExtensionPlatform.get("accountList")).accountList;
-    const currentAccount = accountList.filter(v => v.selection)[0];
-    const pri = getPri(currentAccount.aesPri, password);
+  
+  /**
+   * 获取wallet
+   */
+  async getWallet(priHex) {
+    let pri;
+    if (priHex) {
+      pri = priHex
+    } else {
+      const encryptPassword = (await ExtensionPlatform.get("password")).password;
+      const password = decryptPassword(encryptPassword);
+      const accountList = (await ExtensionPlatform.get("accountList")).accountList;
+      const currentAccount = accountList.filter(v => v.selection)[0];
+      pri = getPri(currentAccount.aesPri, password);
+    }
     const privateKey = ethers.utils.hexZeroPad(ethers.utils.hexStripZeros("0x" + pri), 32);
     return new ethers.Wallet(privateKey, this.provider);
   }
@@ -483,7 +568,7 @@ export class ETransfer {
   async sendTransactionByTxHex(params) {
     const txHex = await this.getTxHex(params);
     const tx = await this.provider.sendTransaction(txHex);
-    console.log(tx, 99966);
+    //console.log(tx, 99966);
     return tx;
   }
 
@@ -499,8 +584,9 @@ export class ETransfer {
     const wallet = await this.getWallet();
     const nonce = await wallet.getTransactionCount();
     const gasPrice = await this.provider.getGasPrice();
-    const gasLimit = params.contractAddress ? "100000" : "33594";
+    const gasLimit = params.contractAddress ? "100000" : "35000";
     const transaction = {nonce, gasLimit: Number(gasLimit), gasPrice};
+    // debugger
     if (params.contractAddress) {
       // token转账
       const numberOfTokens = ethers.utils.parseUnits(params.value, params.tokenDecimals);
@@ -513,8 +599,10 @@ export class ETransfer {
       }
       return wallet.sign(transaction);
     } else {
+      console.log(params, 11111);
       // 非token转账
       const value = ethers.utils.parseEther(params.value);
+      console.log(value, 22222);
       transaction.to = params.to;
       transaction.value = value;
 
@@ -524,6 +612,64 @@ export class ETransfer {
       console.log(transaction, 888);
       return await wallet.sign(transaction);
     }
+  }
+
+  /**
+   * 链内交易签名 gaslimit、gasprice
+   * to 交易地址
+   * value 转账金额
+   * gaslimit
+   * gasprice
+   * contractAddress token交易时合约地址
+   * tokenDecimals token decimals
+   */
+  async getTxHexTwo(params) {
+    //console.log(params);
+    const wallet = await this.getWallet();
+    const nonce = await wallet.getTransactionCount();
+    const gasPrice = Number(params.gasPrice);
+    const gasLimit = Number(params.gasLimit);
+    const transaction = {nonce, gasLimit: Number(gasLimit), gasPrice};
+    if (params.contractAddress) {
+      // token转账
+      const numberOfTokens = ethers.utils.parseUnits(params.value, params.tokenDecimals);
+      const iface = new ethers.utils.Interface(["function transfer(address recipient, uint256 amount)"]);
+      const data = iface.functions["transfer(address,uint256)"].encode([params.to, numberOfTokens]);
+      transaction.to = params.contractAddress;
+      transaction.data = data;
+      // console.log(transaction, 1)
+      // return
+      return wallet.sign(transaction);
+    } else {
+      // 非token转账
+      const value = ethers.utils.parseEther(params.value);
+      transaction.to = params.to;
+      transaction.value = value;
+      //console.log(transaction, 6666);
+      // console.log(transaction, 2)
+      // return
+      return await wallet.sign(transaction);
+    }
+  }
+
+  /**
+   * ETH data签名
+   * tokenDecimals token decimals
+   */
+  async getTxHexThree(params, priHex) {
+    const wallet = await this.getWallet(priHex);
+    const nonce = await wallet.getTransactionCount();
+    const transaction = { nonce, ...params }
+    if (!params.gasLimit&&!params.gasPrice) {
+      const gasPrice = await this.provider.getGasPrice();
+      const gasLimit = Number(params.value) === 0 && Number(params.data) !== 0 ? "100000" : "35000";
+      // transaction = {nonce, gasLimit: Number(gasLimit), gasPrice, ...params};
+      transaction.gasLimit = Number(gasLimit)
+      transaction.gasPrice = gasPrice
+    }
+    // delete transaction.from;
+    console.log(transaction, "tasn")
+    return await wallet.sign(transaction);
   }
 
   /**
@@ -539,7 +685,7 @@ export class ETransfer {
     const wallet = await this.getWallet();
     const nonce = await wallet.getTransactionCount();
     const gasPrice = await this.provider.getGasPrice();
-    const gasLimit = params.contractAddress ? "100000" : "33594";
+    const gasLimit = params.contractAddress ? "100000" : "35000";
     const transaction = {to: params.multySignAddress, nonce, gasLimit: Number(gasLimit), gasPrice};
     const iface = new ethers.utils.Interface(CROSS_OUT_ABI);
     if (params.contractAddress) {
@@ -576,7 +722,55 @@ export class ETransfer {
         console.error("failed: " + failed);
         return null;
       }
-      console.log(transaction, 888);
+      //console.log(transaction, 888);
+      return await wallet.sign(transaction);
+    }
+  }
+
+  /**
+   * 跨链转入交易签名2 传入 gasPrice gasLimit
+   * to nerve地址
+   * value 转账金额
+   * gasPrice
+   * gasLimit
+   * multySignAddress 多签地址
+   * contractAddress token交易时合约地址
+   * tokenDecimals token decimals
+   */
+  async getCrossInTxHexTwo(params) {
+    //console.log(params);
+    const wallet = await this.getWallet();
+    const nonce = await wallet.getTransactionCount();
+    const gasPrice = Number(params.gasPrice);
+    const gasLimit = Number(params.gasLimit);
+    const transaction = {to: params.multySignAddress, nonce, gasLimit: Number(gasLimit), gasPrice};
+    const iface = new ethers.utils.Interface(CROSS_OUT_ABI);
+    if (params.contractAddress) {
+      // token转账
+      const numberOfTokens = ethers.utils.parseUnits(params.value, params.tokenDecimals);
+      const data = iface.functions.crossOut.encode([params.to, numberOfTokens, params.contractAddress]);
+      transaction.from = params.from;
+      transaction.value = "0x00";
+      transaction.data = data;
+      const failed = await this.validate(transaction);
+      if (failed) {
+        console.error("failed: " + failed);
+        return null;
+      }
+      delete transaction.from; //etherjs 4.0 from参数无效 报错
+      return wallet.sign(transaction);
+    } else {
+      // 非token转账
+      const value = ethers.utils.parseEther(params.value);
+      const data = iface.functions.crossOut.encode([params.to, value, "0x0000000000000000000000000000000000000000"]);
+      transaction.value = value;
+      transaction.data = data;
+      const failed = await this.validate(transaction);
+      if (failed) {
+        console.error("failed: " + failed);
+        return null;
+      }
+      //console.log(transaction, 999);
       return await wallet.sign(transaction);
     }
   }
@@ -592,7 +786,8 @@ export class ETransfer {
     const allowancePromise = contract.allowance(address, multySignAddress);
     return allowancePromise
       .then(allowance => {
-        const baseAllowance = "100000000000000000000000000000000000000000000000000000000000000000000000000000";
+        //const baseAllowance = "100000000000000000000000000000000000000000000000000000000000000000000000000000";
+        const baseAllowance = '39600000000000000000000000000';
         //已授权额度小于baseAllowance，则需要授权
         return Minus(baseAllowance, allowance) >= 0;
       })
@@ -677,7 +872,7 @@ export class ETransfer {
    * @param isToken   是否token资产
    */
   async calWithdrawalNVTFee(nvtUSD, heterogeneousChainUSD, isToken) {
-    console.log(nvtUSD, heterogeneousChainUSD, isToken);
+    //console.log(nvtUSD, heterogeneousChainUSD, isToken);
     const gasPrice = await this.getWithdrawGas();
     let gasLimit;
     if (isToken) {
@@ -688,12 +883,12 @@ export class ETransfer {
     const nvtUSDBig = ethers.utils.parseUnits(nvtUSD, 6);
     const ethUSDBig = ethers.utils.parseUnits(heterogeneousChainUSD, 6);
     const result = ethUSDBig.mul(gasPrice).mul(gasLimit).div(ethers.utils.parseUnits(nvtUSDBig.toString(), 10));
-    console.log('result: ' + result.toString());
+    //console.log('result: ' + result.toString());
     const numberStr = ethers.utils.formatUnits(result, 8).toString();
     const ceil = Math.ceil(numberStr);
-    console.log('ceil: ' + ceil);
+    //console.log('ceil: ' + ceil);
     const finalResult = ethers.utils.parseUnits(ceil.toString(), 8);
-    console.log('finalResult: ' + finalResult);
+    //console.log('finalResult: ' + finalResult);
     return finalResult;
   }
 
@@ -715,6 +910,8 @@ export class ETransfer {
     } else {
       gasLimit = new ethers.utils.BigNumber("190000");
     }
+    //console.log(gasPrice);
+    //console.log(gasLimit);
     const result = gasLimit.mul(gasPrice);
     const finalResult = ethers.utils.formatEther(result);
     // console.log('finalResult: ' + finalResult);
@@ -742,4 +939,35 @@ export class ETransfer {
     // console.log('finalResult: ' + finalResult);
     return finalResult.toString();
   }
+
+  /**
+   * @desc 签名message
+   * @param {string} dataHex // 签名内容
+   * @param {string} pri
+   */
+  async signMessage(dataHex, pri) {
+    const wallet = await this.getWallet(pri);
+    return wallet.signMessage(dataHex);
+  }
 }
+
+// 验证signMessage
+// const message = "Example `personal_sign` message";
+/* const message = "123456";
+const pri = "32a78bf8cb9527771f3938c388365d1e084a8d506d39a4cc7036622dbb6344c1"
+try {
+  // debugger
+  const signValue = sdk.signature(message.toString("hex"), pri);
+  console.log(signValue, "n-transfer");
+} catch (e){
+  console.log(e, "===error===")
+}
+ 
+
+const E = new ETransfer({chain: "Ethereum", network: "beta"})
+E.signMessage(message, pri).then(res => console.log(res, "e-transfer"))
+
+const old = "3045022100cf957335e32e9e3dc491182e3e5a33e5de461b7dbb870d127fbbae00cd24845102204ad13b0924d392e633da32900e53442c00bb6eb4dae1fcaef1d2851df4ba276d"
+const pub = "022fb21df00d78dd85d4700a10da7021b3a84d2d9f5998f3eb3ac0e9e76d98246c"
+const v = sdk.verifySign(message, old, pub)
+console.log(v, "验证结果") */

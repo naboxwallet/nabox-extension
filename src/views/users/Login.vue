@@ -16,7 +16,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="submitForm('newAddress')">
-          {{ importAddress ? $t("public.import") : $t("public.create") }}
+          {{ importAddress ? $t("public.import") : $t("public.setPassword") }}
         </el-button>
       </el-form-item>
     </el-form>
@@ -53,7 +53,8 @@
         }
       };
       const validatePass = (rule, value, callback) => {
-        const reg = /(?!^\d+$)(?!^[a-zA-Z]+$)^[0-9a-zA-Z]{8,20}$/;
+        //const reg = /(?!^\d+$)(?!^[a-zA-Z]+$)^[0-9a-zA-Z]{8,20}$/;
+        const reg = /(?!.*\s)(?!^[\u4E00-\u9FA5]+$)(?!^[a-zA-Z]+$)(?!^[\d]+$)(?!^[^\u4E00-\u9FA5a-zA-Z\d]+$)^.{8,20}$/;
         if (value === "") {
           callback(new Error(this.$t("login.login1")));
         } else if (!reg.exec(value)) {
@@ -63,9 +64,10 @@
         }
       };
       const validatePass2 = (rule, value, callback) => {
+        //console.log(value, this.newAddressForm.pass);
         if (value === "") {
           callback(new Error(this.$t("login.login3")));
-        } else if (value !== this.newAddressForm.checkPass) {
+        } else if (value !== this.newAddressForm.pass) {
           callback(new Error(this.$t("login.login4")));
         } else {
           callback();
@@ -97,7 +99,6 @@
     },
 
     mounted() {
-      console.log(999);
     },
 
     methods: {
@@ -122,14 +123,15 @@
             } else {
               addressInfo = createAccount(password);
             }
+            //console.log(addressInfo);
             const {aesPri, pub, beta, main} = addressInfo;
             if (!aesPri || !pub || !beta || !main || !beta.NERVE || !beta.Ethereum) {
-              this.$message({message: this.$t("public.createError"), type: "error", duration: 2000});
+              this.$message({message: this.$t("public.createError"), type: "warning", duration: 3000});
               this.loading = false;
               return false;
             } else {
               const id = genID();
-              const syncRes = await this.syncAccount(pub, beta);
+              const syncRes = await this.syncAccount(pub, addressInfo);
               if (syncRes) {
                 const account = {
                   id: id,
@@ -148,7 +150,7 @@
                 this.loading = false;
                 this.$router.push("/");
               } else {
-                this.$message({type: "error", message: "网络异常，请稍后再试"});
+                this.$message({type: "warning", message: "网络异常，请稍后再试"});
                 this.loading = false;
               }
             }
@@ -159,11 +161,27 @@
       },
 
       async syncAccount(pub, accounts) {
-        const addressList = Object.keys(accounts).map(v => {
-          return {chain: v, address: accounts[v]};
+        let accountsList = accounts[this.$store.state.network];
+        const addressList = Object.keys(accountsList).map(v => {
+          return {chain: v, address: accountsList[v]};
         });
+        let config = JSON.parse(localStorage.getItem('config'));
+        let assetsList = Object.keys(config.main);
+        if (!assetsList.includes('OKExChain')) { //todo ok主网上线去掉
+          addressList.splice(addressList.findIndex(item => item.chain === 'OKExChain'), 1);
+        }
         const res = await this.$request({url: "/wallet/sync", data: {pubKey: pub, addressList}});
         if (res.code === 1000) {
+          let network = this.$store.state.network === 'main' ? 'beta' : 'main';
+          let accountsListTwo = accounts[network];
+          const addressListTwo = Object.keys(accountsListTwo).map(v => {
+            return {chain: v, address: accountsListTwo[v]};
+          });
+          await this.$request({
+            url: "/wallet/sync",
+            data: {pubKey: pub, addressList: addressListTwo},
+            network: network
+          });
           return true;
         }
         return false;

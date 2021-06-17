@@ -6,7 +6,7 @@
         <h3>{{ $t("home.home12") }}</h3>
         <div class="content">
           <div class="head">
-            <span>{{ $t("public.symbol") }}</span>
+            <span>{{ $t("public.chain") }}</span>
             <span>{{ $t("public.amount") }}</span>
             <span>{{ $t("public.percent") }}</span>
           </div>

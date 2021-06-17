@@ -11,13 +11,13 @@ import {
   //   MenuItem,
   //   MenuItemGroup,
   Input,
-  //   InputNumber,
+  InputNumber,
   Radio,
   RadioGroup,
   RadioButton,
   Checkbox,
   //   CheckboxButton,
-  //   CheckboxGroup,
+  CheckboxGroup,
   Switch,
   Select,
   Option,
@@ -30,7 +30,7 @@ import {
   //   TimeSelect,
   //   TimePicker,
   //   Popover,
-  //   Tooltip,
+  Tooltip,
   //   Breadcrumb,
   //   BreadcrumbItem,
   Form,
@@ -54,8 +54,8 @@ import {
   //   Step,
   //   Carousel,
   //   CarouselItem,
-  //   Collapse,
-  //   CollapseItem,
+     Collapse,
+     CollapseItem,
   //   Cascader,
   //   ColorPicker,
   //   Transfer,
@@ -68,7 +68,7 @@ import {
   //   TimelineItem,
   //   Link,
   //   Divider,
-     Image,
+  Image,
   //   Calendar,
   //   Backtop,
   //   PageHeader,
@@ -97,13 +97,13 @@ import messages from "../locales";
 // Vue.use(MenuItem);
 // Vue.use(MenuItemGroup);
 Vue.use(Input);
-// Vue.use(InputNumber);
+Vue.use(InputNumber);
 Vue.use(Radio);
 Vue.use(RadioGroup);
 Vue.use(RadioButton);
 Vue.use(Checkbox);
 // Vue.use(CheckboxButton);
-// Vue.use(CheckboxGroup);
+Vue.use(CheckboxGroup);
 Vue.use(Switch);
 Vue.use(Select);
 Vue.use(Option);
@@ -116,7 +116,7 @@ Vue.use(Button);
 // Vue.use(TimeSelect);
 // Vue.use(TimePicker);
 // Vue.use(Popover);
-// Vue.use(Tooltip);
+Vue.use(Tooltip);
 // Vue.use(Breadcrumb);
 // Vue.use(BreadcrumbItem);
 Vue.use(Form);
@@ -140,8 +140,8 @@ Vue.use(TabPane);
 // Vue.use(Step);
 // Vue.use(Carousel);
 // Vue.use(CarouselItem);
-// Vue.use(Collapse);
-// Vue.use(CollapseItem);
+ Vue.use(Collapse);
+ Vue.use(CollapseItem);
 // Vue.use(Cascader);
 // Vue.use(ColorPicker);
 // Vue.use(Transfer);
@@ -154,7 +154,7 @@ Vue.use(TabPane);
 // Vue.use(TimelineItem);
 // Vue.use(Link);
 // Vue.use(Divider);
- Vue.use(Image);
+Vue.use(Image);
 // Vue.use(Calendar);
 // Vue.use(Backtop);
 // Vue.use(PageHeader);

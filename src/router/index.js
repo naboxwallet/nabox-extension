@@ -97,9 +97,39 @@ const routes = [
     component: () => import("../views/notification/SendTransaction.vue")
   },
   {
+    path: "/notification/sign-hex",
+    name: "NotificationSendHex",
+    component: () => import("../views/notification/SignHex.vue")
+  },
+  {
+    path: "/notification/sign-transaction",
+    name: "NotificationSignTransaction",
+    component: () => import("../views/notification/SignTransaction.vue")
+  },
+  {
     path: "/notification/send-cross-transaction",
     name: "NotificationSendCrossTransaction",
     component: () => import("../views/notification/SendCrossTransaction.vue")
+  },
+  {
+    path: "/notification/send-eth-transaction",
+    name: "NotificationSendEthTransaction",
+    component: () => import("../views/notification/SendEthTransaction.vue")
+  },
+  {
+    path: "/notification/transaction-serialize",
+    name: "NotificationTransactionSerialize",
+    component: () => import("../views/notification/TransactionSerialize.vue")
+  },
+  {
+    path: "/notification/contract-call",
+    name: "NotificationContractCall",
+    component: () => import("../views/notification/ContractCall.vue")
+  },
+  {
+    path: "/notification/sign-message",
+    name: "NotificationSignMessage",
+    component: () => import("../views/notification/SignMessage.vue")
   },
   {
     path: "/about",

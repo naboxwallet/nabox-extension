@@ -1,6 +1,13 @@
 const CopyPlugin = require("copy-webpack-plugin");
 const path = require("path");
 const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
+
+// 生产环境下清除console打印
+const plugins = [];
+if (process.env.NODE_ENV === 'production') {
+  //plugins.push('transform-remove-console');
+  plugins.push(["transform-remove-console", { "exclude": [ "error", "warn"] }])
+}
 module.exports = {
   pages: {
     /* inPage: {
@@ -94,4 +101,9 @@ module.exports = {
       config.
     }); */
   }
+  /*parser: 'babel-eslint',//解析器，这里我们使用babel-eslint
+  rules:{
+    "no-cond-assign": 2, //条件语句的条件中不允许出现赋值运算符
+    "no-constant-condition": 2, //条件语句的条件中不允许出现恒定不变的量
+  }*/
 };

@@ -179,7 +179,7 @@
         this.transferModal.from = accounts[this.network][this.chain];
         this.transferModal.toChain = this.chain;
         this.feeSymbol = chainToSymbol[this.chain];
-        const config = JSON.parse(sessionStorage.getItem("config"));
+        const config = JSON.parse(localStorage.getItem("config"));
         this.MAIN_INFO = config[this.network][this.chain];
 
         if (this.chain !== "NULS" && this.chain !== "NERVE") {
@@ -226,7 +226,7 @@
       // 计算eth bnb跨链转账手续费
       async getGasPrice() {
         this.feeLoading = true;
-        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
+        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "35000";
         this.fee = await this.eTransfer.getGasPrice(gasLimit);
         this.feeLoading = false;
       },
@@ -234,7 +234,7 @@
       // 计算eth bnb加速跨链转账手续费
       async getSpeedUpFee() {
         this.feeLoading = true;
-        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
+        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "35000";
         this.fee = await this.eTransfer.getSpeedUpFee(gasLimit);
         this.feeLoading = false;
       },
@@ -324,7 +324,7 @@
           this.transferModal.gas = res.data.gas;
           this.contractCallData = res.data.contractCallData;
         } else {
-          this.$message({message: res.msg, type: "error", duration: 2000});
+          this.$message({message: res.msg, type: "warning", duration: 2000});
         }
         this.feeLoading = false;
       },
@@ -378,7 +378,7 @@
           } catch (e) {
             console.error("签名失败" + e);
             this.loading = false;
-            this.$message({type: "error", message: e, duration: 2000});
+            this.$message({type: "warning", message: e, duration: 2000});
             this.respond({success: false, data: e});
             return;
           }
@@ -394,7 +394,7 @@
           } catch (e) {
             console.error("组装交易失败" + e);
             this.loading = false;
-            this.$message({type: "error", message: e, duration: 2000});
+            this.$message({type: "warning", message: e, duration: 2000});
             this.respond({success: false, data: e});
             return;
           }
@@ -418,7 +418,7 @@
           this.$message({type: "success", message: this.$t("transfer.transfer13"), duration: 2000});
           this.respond({success: true, data: res.data});
         } else {
-          this.$message({type: "error", message: res.msg, duration: 2000});
+          this.$message({type: "warning", message: res.msg, duration: 2000});
           this.respond({success: false, data: res.msg});
         }
       },

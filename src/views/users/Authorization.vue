@@ -1,9 +1,8 @@
-/* eslint-disable vue/valid-v-bind */
 <template>
   <div class="authorization">
     <div class="from-wrap">
       <div class="from-logo">
-        <img v-if="siteInfo.icon" :src="notification.icon"/>
+        <img v-if="siteInfo.icon" :src="siteInfo.icon"/>
         <i v-else>C</i>
       </div>
       <p class="from-origin">
@@ -14,12 +13,12 @@
       <h3 class="tc">{{ $t("authorization.authorization1") }}</h3>
     </div>
     <div class="network-list">
-      <h3>{{ $t("authorization.authorization5") }}</h3>
-      <el-radio-group v-model="network">
-        <el-radio :key="item" :label="item" v-for="item in networkList">
-          {{ item }}
-        </el-radio>
-      </el-radio-group>
+      <h3>
+        <!-- {{ $t("authorization.authorization7") }}
+        <br/> -->
+        {{ superLong(accountInfo.address) }}
+      </h3>
+      <p class="plugin-chain-info">{{ $t("authorization.authorization6") + chainInfo.chain + " - " +chainInfo.network }}</p>
     </div>
     <div class="btn-wrap">
       <el-button @click="reject">{{ $t("public.cancel") }}</el-button>
@@ -31,15 +30,15 @@
 </template>
 
 <script>
-  import {getStorage} from "@/utils/util";
+  import { getStorage, superLong } from "@/utils/util";
   import ExtensionPlatform from "@/utils/extension";
 
   export default {
     data() {
       return {
         siteInfo: this.$route.query,
-        networkList: ["NULS", "NERVE", "Ethereum", "BSC", "Heco"],
-        network: "NULS",
+        chainInfo: {},
+        accountInfo: {}
       };
     },
 
@@ -53,10 +52,29 @@
     },
 
     async mounted() {
+      // console.log(this.siteInfo, 6655)
+      if (!this.siteInfo || !this.siteInfo.domain) {
+        this.$message({ message: "unknown error", type: "warning", duration: 1000 });
+        this.close();
+        return;
+      }
+      
+      const nabox = await getStorage("nabox", {});
+      this.chainInfo = {
+        chain: nabox.chain || "Ethereum",
+        network: nabox.network || "main"
+      }
+      const currentAccount = this.$store.getters.currentAccount;
+      this.accountInfo = {
+        address: currentAccount[this.chainInfo.network][this.chainInfo.chain],
+        accountId: currentAccount.id
+      }
     },
 
     methods: {
-
+      superLong(str, len = 12) {
+        return superLong(str, len)
+      },
       close() {
         this.$router.go(-1);
       },
@@ -67,9 +85,27 @@
 
       async connect() {
         const nabox = await getStorage("nabox", {});
-        const allowSites = nabox.allowSites;
-        allowSites.push({origin: this.siteInfo.domain, chain: this.network});
+        const { allowSites = [], chain, network, chainId } = nabox;
+        const existIndex = allowSites.findIndex(v => v.origin === this.siteInfo.domain)
+        if (existIndex > -1) {
+          const approvedList = allowSites[existIndex].approvedList || [];
+          const exist = approvedList.findIndex(v => v.address === this.accountInfo.address);
+          if (exist > -1){
+            this.close();
+            return;
+          }
+          allowSites[existIndex].approvedList.push(this.accountInfo)
+        } else {
+          allowSites.push({
+            origin: this.siteInfo.domain,
+            // chain,
+            // network,
+            approvedList: [this.accountInfo],
+            // chainId,
+          });
+        }
         nabox.allowSites = allowSites;
+        // nabox.allowSites = []
         await ExtensionPlatform.set({nabox});
         this.close();
       }
@@ -122,6 +158,10 @@
       .el-radio {
         display: block;
       }
+    }
+    .plugin-chain-info {
+      font-weight: 600;
+      line-height: 40px;
     }
     .btn-wrap {
       text-align: center;

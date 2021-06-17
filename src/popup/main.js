@@ -7,6 +7,13 @@ import i18n from "../plugins/element";
 import {getStorage} from "./../utils/util";
 import {request} from "./../utils/request";
 
+
+const development = process.env.NODE_ENV === "development"
+
+if (!development) {
+  console.log = () => {};
+}
+
 router.beforeEach(async (to, from, next) => {
   //console.log(to, from, next);
   const accountList = await getStorage("accountList", []);
@@ -28,38 +35,50 @@ router.beforeEach(async (to, from, next) => {
 });
 Vue.prototype.$request = request;
 
-async function getConfig() {
+//获取主网和测试网络的配置文件
+async function getConfigByNetwork() {
   try {
-    const betaRes = await request({url: "/api/chain/config", method: "get", network: "beta"});
-    //console.log(betaRes, "==config==");
-    let beta = {};
-    if (betaRes.data && betaRes.data.length) {
-      betaRes.data.map(v => {
-        const mainInfo = v.mainAsset;
-        beta[v.chain] = {
-          chainId: mainInfo ? mainInfo.chainId : "",
-          assetId: mainInfo ? mainInfo.assetId : "",
-          prefix: v.prefix,
-          symbol: mainInfo ? mainInfo.symbol : "",
-          decimal: mainInfo ? mainInfo.decimals : "",
-          assets: v.assets,
-          config: v.configs
-        }
-      });
-    }
-    const config = {beta, main: beta};
-    sessionStorage.setItem("config", JSON.stringify(config));
+    const beta = await getConfig("beta");
+    const main = await getConfig("main");
+    const config = {beta, main};
+    localStorage.setItem("config", JSON.stringify(config));
   } catch (e) {
-    console.error(e, "获取链配置失败");
+    //
   }
-  /* eslint-disable no-new */
-  new Vue({
-    el: "#app",
-    router,
-    store,
-    i18n,
-    render: h => h(App)
-  });
 }
 
-getConfig();
+//获取网络配置文件
+async function getConfig(network) {
+  const info = await request({url: "/api/chain/config", method: "get", network});
+  //console.log(betaRes, "==config==");
+  const res = {};
+  if (info.data && info.data.length) {
+    info.data.map(v => {
+      const mainInfo = v.mainAsset;
+      res[v.chain] = {
+        chainId: mainInfo ? mainInfo.chainId : "",
+        assetId: mainInfo ? mainInfo.assetId : "",
+        prefix: v.prefix,
+        symbol: mainInfo ? mainInfo.symbol : "",
+        decimal: mainInfo ? mainInfo.decimals : "",
+        assets: v.assets,
+        config: v.configs,
+        nativeId: v.nativeId
+      }
+    });
+  } else {
+    throw "get config error"
+  }
+  return res
+}
+
+getConfigByNetwork();
+
+/* eslint-disable no-new */
+new Vue({
+  el: "#app",
+  router,
+  store,
+  i18n,
+  render: h => h(App)
+});

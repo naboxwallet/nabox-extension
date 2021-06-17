@@ -6,8 +6,11 @@
           <el-form-item :label="'From(' + chain + ')'">
             <el-input disabled :value="superLong(transferModal.from)">
             </el-input>
+            <p class="address-validate-error" v-if="addressError || !isAccreditAddress">
+              {{ addressError ? $t("notification.notification5") : $t('notification.notification7') }}
+            </p>
           </el-form-item>
-          <el-form-item :label="'To(' + transferModal.toChain + ')'">
+          <el-form-item :label="'To(' + transferModal.toChain + ')'" prop="to">
             <el-input disabled :value="superLong(transferModal.to)">
             </el-input>
           </el-form-item>
@@ -27,7 +30,7 @@
             </el-input>
           </el-form-item>
           <div class="fee">
-            <p class="fee-label">{{ $t("public.fee") }}</p>
+            <p class="fee-label">{{ $t("public.fee") }}: </p>
             <span v-if="!feeLoading">{{ fee }}{{ feeSymbol }}</span>
             <img v-else src="../../assets/img/loading.svg"/>
             <el-checkbox v-if="chain !== 'NULS' && chain !== 'NERVE'" v-model="speedUpFee" @change="changeSpeedUpFee">
@@ -36,7 +39,7 @@
           </div>
           <div class="btn-wrap">
             <el-button @click="reject">{{ $t("public.cancel") }}</el-button>
-            <el-button type="primary" @click="checkForm('transferForm')" :disabled="feeLoading">
+            <el-button type="primary" @click="checkForm('transferForm')" :disabled="feeLoading || addressError">
               {{ $t("public.next") }}
             </el-button>
           </div>
@@ -55,6 +58,7 @@
   import {NTransfer, ETransfer, validateAddress} from "@/utils/api";
   import {getContractCallData} from "@/utils/nulsContractValidate";
   import nuls from "nuls-sdk-js";
+  import notifacationMixin from "./nofifacationMixin"
 
   export default {
     data() {
@@ -70,7 +74,6 @@
             callback(new Error(this.$t("transfer.transfer1")));
           }
         } else if (this.chain === "NERVE" || this.chain === "NULS") {
-          console.log(132);
           const from = nuls.verifyAddress(this.transferModal.from);
           let to = {};
           try {
@@ -108,13 +111,14 @@
       return {
         loading: true,
         chain: "",
-        notification: {},
+        // notification: {},
         transferModal: {
           from: "",
           to: "",
           symbol: "",
           amount: "",
           remarks: "",
+          data: '',
           gas: 1,
           price: 25,
         },
@@ -129,9 +133,11 @@
         speedUpFee: false,
         showSpeedUp: false,
         feeLoading: false,
-        showConfirm: false
+        showConfirm: false,
+        isAccreditAddress: true
       };
     },
+    mixins: [notifacationMixin],
 
     components: {
       TransferConfirm
@@ -152,12 +158,19 @@
       }
     },
 
-    async created() {
-      await this.init();
-      this.loading = false;
+    created() {
+
     },
 
     mounted() {
+
+      if (JSON.parse(localStorage.getItem("config"))) {
+        this.init();
+      } else {
+        setTimeout(async () => {
+          await this.init();
+        }, 1000)
+      }
     },
 
     methods: {
@@ -167,49 +180,60 @@
       },
 
       async init() {
-        this.notification = chrome.extension.getBackgroundPage().notification;
         const txData = this.notification.data;
+        console.log(txData, "txData222");
         this.transferModal = Object.assign(this.transferModal, txData);
-        this.network = this.$store.state.network;
-        const fromOrigin = this.notification.domain;
-        const nabox = await getStorage("nabox", {});
-        this.chain = nabox.allowSites.filter(v => v.origin === fromOrigin)[0].chain;
-        // this.chain = "NULS"
-        const accounts = this.$store.getters.currentAccount;
-        this.transferModal.from = accounts[this.network][this.chain];
-        this.transferModal.toChain = this.chain;
-        this.feeSymbol = chainToSymbol[this.chain];
-        const config = JSON.parse(sessionStorage.getItem("config"));
-        this.MAIN_INFO = config[this.network][this.chain];
-
+        this.connectedInfo = await this.getConnectInfo();
+        await this.validateAddress(txData.from)
+        const {chain, network} = this.connectedInfo;
+        this.network = network;
+        this.chain = chain;
+        // const accounts = this.$store.getters.currentAccount;
+        this.transferModal.from = txData.from; //accounts[network][chain];
+        this.transferModal.toChain = chain;
+        this.feeSymbol = chainToSymbol[chain];
+        const config = JSON.parse(localStorage.getItem("config"));
+        // console.log(this.network, this.chain, config);
+        this.MAIN_INFO = config[network][chain];
+        this.isAccreditAddress = await this.checkCurrentAccount(this.notification.data.address)
+        // console.log(this.MAIN_INFO);
         if (this.chain !== "NULS" && this.chain !== "NERVE") {
-          this.initEtransfer();
+          // TODO
+          this.respond({success: false, data: "Not support yet"});
+          return;
+          //
+          // this.initEtransfer();
         } else {
           this.initNtransfer();
         }
       },
 
       async initEtransfer() {
-        const {to, data, value} = this.transferModal;
+        // console.log(this.transferModal, 6666);
+        const {to, data, value} = this.transferModal.params[0];
+        // console.log(to, data, value, this.chain, this.network, 7777);
         this.eTransfer = new ETransfer({
           chain: this.chain,
           network: this.network
         });
+        // console.log(this.eTransfer);
         const decodeData = this.eTransfer.decodeData(data);
-        // console.log(decodeData, 55)
+        // console.log(decodeData, 55);
         if (decodeData) {
           // eth bsc token转账
-          const contractAddress = to;
+          const contractAddress = to; 
           await this.getTransferAsset({contractAddress}, decodeData.amount);
           this.transferModal.to = decodeData.to;
+          this.getGasPrice();
         } else {
           //主资产转账
           const params = {
             chainId: this.MAIN_INFO.chainId,
             assetId: this.MAIN_INFO.assetId
           };
+          // console.log(params, 888);
           const amount = this.eTransfer.formatEther(value);
-          console.log(amount, 999);
+          // console.log(amount, 999);
           await this.getTransferAsset(params, amount);
           this.transferModal.amount = amount;
         }
@@ -226,15 +250,17 @@
       // 计算eth bnb跨链转账手续费
       async getGasPrice() {
         this.feeLoading = true;
-        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
+        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "35000";
+        // console.log(gasLimit, "gasLimit");
         this.fee = await this.eTransfer.getGasPrice(gasLimit);
+        // console.log(this.fee, "getGasPrice");
         this.feeLoading = false;
       },
 
       // 计算eth bnb加速跨链转账手续费
       async getSpeedUpFee() {
         this.feeLoading = true;
-        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "33594";
+        const gasLimit = this.chooseAsset.contractAddress ? "100000" : "35000";
         this.fee = await this.eTransfer.getSpeedUpFee(gasLimit);
         this.feeLoading = false;
       },
@@ -250,7 +276,9 @@
       async getTransferAsset(data, amount) {
         const params = {chain: this.chain, address: this.transferModal.from, refresh: true, ...data};
         const res = await this.$request({url: "/wallet/address/asset", data: params});
+        console.log(res, 'getTransferAsset');
         if (res.code === 1000) {
+          this.loading = false;
           res.data.balance = divisionDecimals(res.data.balance, res.data.decimals);
           this.chooseAsset = res.data;
           if (this.chain !== "NULS" && this.chain !== "NERVE") {
@@ -261,6 +289,7 @@
             this.transferModal.amount = divisionDecimals(amount, res.data.decimals);
           }
         } else if (res.data === "asset not exist") {
+          this.loading = false;
           this.getAssetFailCount++;
           await this.foucusAsset(data);
           if (this.getAssetCount < 5) {
@@ -324,7 +353,7 @@
           this.transferModal.gas = res.data.gas;
           this.contractCallData = res.data.contractCallData;
         } else {
-          this.$message({message: res.msg, type: "error", duration: 2000});
+          this.$message({message: res.msg, type: "warning", duration: 2000});
         }
         this.feeLoading = false;
       },
@@ -342,6 +371,11 @@
       async submit() {
         let txHex = "";
         this.loading = true;
+        const priInfo = await this.getPriAndPubKey(this.transferModal.from);
+          if (!priInfo) {
+            this.respond({success: false, data: "sign error"});
+            return;
+          }
         if (this.chain === "NULS" || this.chain === "NERVE") {
           const transfer = new NTransfer({chain: this.chain, network: this.network, type: this.type});
           const transferInfo = {
@@ -374,32 +408,43 @@
               outputs: inputOuput.outputs,
               remarks: this.transferModal.remarks,
               txData
-            });
+            }, priInfo.pri, priInfo.pubKey);
           } catch (e) {
             console.error("签名失败" + e);
             this.loading = false;
-            this.$message({type: "error", message: e, duration: 2000});
+            this.$message({type: "warning", message: e, duration: 2000});
             this.respond({success: false, data: e});
             return;
           }
         } else {
           try {
-            txHex = await this.eTransfer.getTxHex({
-              to: this.transferModal.to,
-              value: this.transferModal.amount,
+            console.log(this.transferModal);
+            let data = {
+              /*to: this.transferModal.params[0].to,
+              value: this.transferModal.params[0].value,
               upSpeed: this.speedUpFee, //是否加速
               contractAddress: this.chooseAsset.contractAddress,
-              tokenDecimals: this.chooseAsset.decimals
-            });
+              tokenDecimals: this.chooseAsset.decimals*/
+
+              from:  this.transferModal.params[0].from,
+              to:  this.transferModal.params[0].to,
+              data: this.transferModal.params[0].data,
+              value: this.transferModal.params[0].value,
+
+            };
+            console.log(data, 123456789);
+            txHex = await this.eTransfer.getTxHexThree(data, priInfo.pri);
           } catch (e) {
             console.error("组装交易失败" + e);
             this.loading = false;
-            this.$message({type: "error", message: e, duration: 2000});
+            this.$message({type: "warning", message: e, duration: 2000});
             this.respond({success: false, data: e});
             return;
           }
         }
         if (this.transferModal.sign) {
+          this.loading = false;
+          this.showConfirm = false;
           this.respond({success: true, data: txHex});
         } else {
           this.broadcastTx(txHex);
@@ -414,16 +459,17 @@
         const params = {chain: this.chain, address: this.transferModal.from, txHex, ...assetInfo};
         const res = await this.$request({url: "/tx/transfer", method: "post", data: params});
         this.loading = false;
+        this.showConfirm = false;
         if (res.code === 1000) {
           this.$message({type: "success", message: this.$t("transfer.transfer13"), duration: 2000});
           this.respond({success: true, data: res.data});
         } else {
-          this.$message({type: "error", message: res.msg, duration: 2000});
+          this.$message({type: "warning", message: res.msg, duration: 2000});
           this.respond({success: false, data: res.msg});
         }
       },
 
-      close() {
+      /* close() {
         setTimeout(() => {
           NotificationService.close();
         }, 1000)
@@ -436,8 +482,8 @@
 
       respond(data) {
         this.notification.responder(data);
-        this.close();
-      }
+        //this.close();
+      } */
     }
   };
 </script>
@@ -445,6 +491,10 @@
   .send-transaction {
     .content {
       padding-top: 30px;
+    }
+    .address-validate-error {
+      line-height: 1!important;
+      font-size: 12px!important;
     }
     .btn-wrap {
       text-align: center;

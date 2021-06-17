@@ -10,7 +10,8 @@
 </template>
 
 <script>
-  import {checkPassword} from "@/utils/util";
+  import {checkPassword, getStorage} from "@/utils/util";
+  import ExtensionPlatform from "@/utils/extension";
 
   export default {
     data() {
@@ -20,13 +21,16 @@
     },
 
     methods: {
-
+      //验证密码
       async checkPassword() {
         const correct = await checkPassword(this.password);
         if (correct) {
+          const nabox = await getStorage("nabox", {});
+          nabox.lock = false;
+          ExtensionPlatform.set({nabox});
           this.$router.push("/");
         } else {
-          this.$message({message: this.$t("login.login11"), type: "error", duration: 1500});
+          this.$message({message: this.$t("login.login11"), type: "warning", duration: 1500});
         }
       }
     }

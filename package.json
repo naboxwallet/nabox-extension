@@ -1,6 +1,6 @@
 {
-  "name": "nuls-chrome-extension",
-  "version": "1.0.0",
+  "name": "nabox-chrome-extension",
+  "version": "1.0.7",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service build --mode development --watch",
@@ -16,7 +16,7 @@
     "ethers": "4",
     "eventemitter3": "^4.0.7",
     "nerve-sdk-js": "^1.0.4",
-    "nuls-sdk-js": "^2.4.7",
+    "nuls-sdk-js": "^2.5.0",
     "qrcodejs2": "^0.0.2",
     "vue": "^2.6.11",
     "vue-i18n": "^8.22.0",

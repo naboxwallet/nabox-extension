@@ -13,7 +13,6 @@ export default new Vuex.Store({
   },
   getters: {
     currentAccount(state) {
-      // console.log(new Date().getTime(), "999")
       return state.accountList.filter(v => v.selection)[0];
     }
   },

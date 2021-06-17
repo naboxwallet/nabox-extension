@@ -28,7 +28,7 @@
 <script>
   import CommonHead from "@/components/CommonHead";
   import ExtensionPlatform from "@/utils/extension";
-  import {checkPassword, getPri, encryptPassword} from "@/utils/util";
+  import {checkPassword, getPri, encryptPassword, getStorage} from "@/utils/util";
   import {getAesPri_PubByPri} from "@/utils/api";
 
   export default {
@@ -44,7 +44,8 @@
         }
       };
       const validatePass = (rule, value, callback) => {
-        const reg = /(?!^\d+$)(?!^[a-zA-Z]+$)^[0-9a-zA-Z]{8,20}$/;
+        //const reg = /(?!^\d+$)(?!^[a-zA-Z]+$)^[0-9a-zA-Z]{8,20}$/;
+        const reg = /(?!.*\s)(?!^[\u4E00-\u9FA5]+$)(?!^[a-zA-Z]+$)(?!^[\d]+$)(?!^[^\u4E00-\u9FA5a-zA-Z\d]+$)^.{8,20}$/;
         if (value === "") {
           callback(new Error(this.$t("login.login1")));
         } else if (!reg.exec(value)) {
@@ -108,10 +109,12 @@
             await this.$store.dispatch("setAccount", accountList);
             const encryptedPassword = encryptPassword(this.changePsForm.pass);
             ExtensionPlatform.set({password: encryptedPassword});
-            this.$message({
-              message: this.$t("accountManage.accountManage6"),
-              type: "success",
-              duration: 1000
+            this.$message({message: this.$t("accountManage.accountManage6"), type: "success", duration: 1000});
+            const nabox = await getStorage("nabox", {});
+            nabox.lock = true;
+            ExtensionPlatform.set({nabox});
+            this.$router.push({
+              path: "/lock",
             });
             this.loading = false;
             this.showChangePass = false;

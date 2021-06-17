@@ -3,40 +3,50 @@
     <div class="left">
       <ul>
         <li v-for="item in assets" :key="item.chain">
-          <img v-show="chain === item.chain" :src="item.activeSrc"/>
-          <img v-show="chain !== item.chain" :src="item.src" v-hover="item.activeSrc" :data-src="item.src"
-               @click="handleChange(item.chain, item.background)"/>
+          <span class="iconfont" v-if="item.running" :class="chain === item.chain ? 'is-active '+ item.icon : item.icon"
+                @click="handleChange(item.chain)">
+          </span>
+          <el-tooltip v-else placement="right" effect="light">
+            <div slot="content">{{$t('home.home20')}}<br/>{{$t('home.home21')}}</div>
+            <span class="iconfont" :class="chain === item.chain ? 'is-active '+item.icon : item.icon +' is-disabled'">
+            </span>
+          </el-tooltip>
         </li>
       </ul>
     </div>
-    <div class="right" v-loading="loading">
-      <div class="card" :style="{ background: cardBackground }">
-        <div class="address">
-          <span>{{ superLong(accountInfo.address) }}</span>
-          <span class="fr">
-            <i class="iconfont icon-copy clicks" @click="copy(accountInfo.address)"></i>
-            <i class="iconfont icon-system-active clicks" @click="$emit('show-modal')"></i>
-          </span>
+    <div class="right" v-loading="loading" element-loading-spinner="el-icon-loading">
+      <div class="right-info">
+        <div class="card">
+          <div class="address">
+            <span class="clicks" @click="copy(accountInfo.address)">{{ superLong(accountInfo.address) }}</span>
+            <img class="code clicks" src="./../../assets/img/code.svg" @click="$emit('show-modal')"/>
+          </div>
+          <div class="asset">{{ $t("home.home6") }}<p>${{ accountInfo.total }}</p></div>
+          <div class="btn-wrap">
+            <span class="in-chain-transfer" @click="toTransfer(false)">{{ $t("home.home7") }}</span>
+            <span class="cross-chain-transfer" @click="toTransfer(true)">{{ $t("home.home8") }}</span>
+          </div>
         </div>
-        <div class="asset">{{ $t("home.home6") }}<p>${{ accountInfo.total }}</p></div>
-        <div class="btn-wrap">
-          <span class="in-chain-transfer" @click="toTransfer(false)">{{ $t("home.home7") }}</span>
-          <span class="cross-chain-transfer" @click="toTransfer(true)">{{ $t("home.home8") }}</span>
-        </div>
-      </div>
-      <div class="assets-list">
-        <i class="el-icon-circle-plus-outline" @click="toAddAsset"></i>
-        <el-tabs v-model="activeTab">
-          <el-tab-pane :label="$t('home.home9')" name="first">
+        <div class="assets-list">
+          <img class="icon" src="./../../assets/img/add.svg" @click="toAddAsset" v-show="isType === 0"/>
+          <div class="title">
+            <span :class="isType === 0 ? 'is-active':'clicks'" @click="choiceType(0)">{{$t('home.home91')}}</span>
+            &nbsp;/&nbsp;
+            <span :class="isType === 1 ? 'is-active':'clicks'" @click="choiceType(1)">{{$t('home.home10')}}</span>
+          </div>
+
+          <div class="assets-data" v-show="isType === 0">
             <assets-list :list="accountInfo.assetsList" @toDetail="toAssetDetail">
             </assets-list>
-          </el-tab-pane>
-          <el-tab-pane :label="$t('home.home10')" name="second">
+          </div>
+
+          <div v-show="isType === 1">
             <tx-list :list="txList" @toDetail="toTxDetail" :total="txTotal" :loading="txLoading"
                      @loadMoreTx="loadMoreTx">
             </tx-list>
-          </el-tab-pane>
-        </el-tabs>
+          </div>
+
+        </div>
       </div>
     </div>
   </div>
@@ -44,35 +54,35 @@
 
 <script>
   import {superLong, copys} from "@/utils/util";
-  import NULS from "../../assets/img/NULS.png";
-  import NULSActive from "../../assets/img/NULS-active.png";
-  import Nerve from "../../assets/img/Nerve.png";
-  import NerveActive from "../../assets/img/Nerve-active.png";
-  import ETH from "../../assets/img/ETH.png";
-  import ETHActive from "../../assets/img/ETH-active.png";
-  import BNB from "../../assets/img/BNB.png";
-  import BNBActive from "../../assets/img/BNB-active.png";
-  import Heco from "../../assets/img/Heco.png";
-  import HecoActive from "../../assets/img/Heco-active.png";
   import AssetsList from "@/components/AssetsList";
   import TxList from "@/components/TxList";
 
   export default {
     data() {
       return {
-        assets: [
-          {chain: "Ethereum", background: "#292e39", src: ETH, activeSrc: ETHActive},
-          {chain: "BSC", background: "#e7ba41", src: BNB, activeSrc: BNBActive},
-          {chain: "Heco", background: "#26356c", src: Heco, activeSrc: HecoActive},
-          {chain: "NULS", background: "#53b8a9", src: NULS, activeSrc: NULSActive},
-          {chain: "NERVE", background: "#5270b5", src: Nerve, activeSrc: NerveActive},
+        oldAssets: [
+          {chain: "Ethereum", icon: 'iconETH', running: true},
+          {chain: "BSC", icon: 'iconBSC', running: true},
+          {chain: "Heco", icon: 'iconHeco', running: true},
+          {chain: "OKExChain", icon: 'iconOKExChain', running: true},
+          {chain: "NULS", icon: 'iconNULS', running: true},
+          {chain: "NERVE", icon: 'iconNVT', running: true},
         ],
+        assets: [],
+        changeSymbol: '',
+        network: this.$store.state.network,
         cardBackground: "#53b8a9",
-        activeTab: "first"
+        activeTab: "first",
+        isType: 0,//显示类型
       };
     },
     props: {
       chain: String,
+      chainList: {
+        type: Object,
+        default: () => {
+        }
+      },
       accountInfo: {
         type: Object,
         default: () => {
@@ -93,7 +103,21 @@
       TxList
     },
 
-    watch: {},
+    watch: {
+      "chainList": function (val) {
+        if (val) {
+          for (let item of this.assets) {
+            item.running = val[item.chain].running;
+          }
+        }
+      },
+      "$store.state.network": function (val) {
+        if (val) {
+          this.assets = [];
+          this.getAssets();
+        }
+      }
+    },
 
     computed: {},
 
@@ -112,30 +136,55 @@
     },
 
     mounted() {
-      const current = this.assets.filter(v => v.chain === this.chain)[0];
-      if (current) {
-        this.cardBackground = current.background;
-      }
+      setTimeout(() => {
+        this.getAssets();
+      }, 50);
     },
 
     methods: {
 
-      superLong(str, len = 7) {
+      //获取链列表
+      getAssets() {
+        let config = JSON.parse(localStorage.getItem('config'));
+        if (!config) {
+          setTimeout(() => {
+            this.getAssets();
+          }, 50);
+          return;
+        }
+        let assetsList = Object.keys(config[this.$store.state.network]);
+        for (let item of this.oldAssets) {
+          for (let k of assetsList) {
+            if (item.chain === k) {
+              this.assets.push(item)
+            }
+          }
+        }
+        //this.$emit("changeSymbol", this.assets[0].chain)
+      },
+
+      superLong(str, len = 9) {
         return superLong(str, len);
       },
 
-      handleChange(chain, background) {
-        this.cardBackground = background;
+      /**
+       * @disc: 选择显示类型
+       * @params: type 0:资产 1:交易记录
+       * @date: 2021-01-28 11:17
+       * @author: Wave
+       */
+      choiceType(type) {
+        this.isType = type;
+      },
+
+      handleChange(chain) {
+        this.changeSymbol = chain;
         this.$emit("changeSymbol", chain);
       },
 
       copy(str) {
         copys(str);
-        this.$message({
-          message: this.$t("public.copySuccess"),
-          type: "success",
-          duration: 1000
-        });
+        this.$message({message: this.$t("public.copySuccess"), type: "success", duration: 1000});
       },
 
       toAssetDetail(info) {
@@ -151,7 +200,7 @@
       },
 
       toTransfer(cross) {
-        const path = cross ? "/cross-chain-transfer" : "in-chain-transfer";
+        const path = cross ? "/cross-chain-transfer" : "inner-transfer";
         this.$emit("toTransfer", path);
       },
 
@@ -161,88 +210,154 @@
 
       loadMoreTx() {
         this.$emit("loadMoreTx");
-      }
+      },
     }
   };
 </script>
+
 <style lang="less" scoped>
   .home-assets {
     display: flex;
-    padding-top: 20px;
-    height: calc(100% - 187px);
+    //padding-top: 20px;
+    //height: calc(100% - 187px);
+    height: 100%;
+
     .left {
-      padding: 0 5px;
+      padding: 30px 2.5px 0;
+      background-color: #f6fbfb;
+      float: left;
+      display: flex;
       li {
-        width: 55px;
+        width: 35px;
+        height: 35px;
         display: flex;
         justify-content: center;
-        margin-bottom: 15px;
-        img {
+        margin-bottom: 20px;
+        &:last-child {
+          .iconfont {
+            padding: 2px 0 0 1.4px;
+          }
+        }
+        .iconfont {
           display: block;
-          width: 28px;
+          font-size: 14px;
+          color: #bac0d3;
           cursor: pointer;
+          width: 20px;
+          height: 20px;
+          border-radius: 25px;
+          padding: 2px 0 0 2px;
+          border: 1px solid #bac0d3;
+        }
+        .is-active {
+          background-color: #53b8a9;
+          border-color: #53b8a9;
+          font-size: 20px;
+          color: #fff;
+          width: 26px;
+          height: 26px;
+          border-radius: 26px;
+          padding: 2px 0 0 2px;
+        }
+        .is-disabled {
+          background-color: #d3d3d3;
+          color: #f2f2f2;
+          border-color: #d3d3d3;
         }
       }
     }
     .right {
-      flex: 1;
-      padding: 0 15px;
-      border-left: 1px solid #e9ebf3;
+      height: 33rem;
+      width: 100%;
+      overflow: auto;
+      padding: 0 15px 0;
+      background-color: #ffffff;
+      float: right;
+      .right-info {
+        overflow: auto;
+        height: 670px
+      }
       .card {
         padding: 15px 20px;
-        height: 150px;
-        border-radius: 15px;
+        height: 164px;
+        border-radius: 2px;
         line-height: 18px;
-        margin-bottom: 10px;
-        * {
-          color: #fff;
-        }
+        background-color: #f6fbfb;
+        border-top: 4px solid #49cdba;
+        margin: 30px 0;
         .address {
-          font-size: 16px;
+          font-size: 13px;
           margin-bottom: 8px;
-          i {
-            font-size: 18px;
-            margin-left: 6px;
+          font-family: DINOT, Roboto;
+          color: #8f95a8;
+          .clicks {
+            &:hover {
+              background-color: #f6fbbb;
+            }
+          }
+          img {
+            margin: 2px 0 0 0;
+            width: 13px;
+            position: relative;
+            float: right;
           }
         }
         .asset {
-          font-size: 14px;
-          color: #f4f4f4;
+          font-size: 10px;
+          color: #bac0d3;
           p {
-            font-size: 18px;
+            padding: 5px 0;
+            font-size: 21px;
             margin: 5px 0;
-            color: #fff;
+            color: #333333;
+            font-weight: bold;
           }
         }
         .btn-wrap {
           margin-top: 15px;
           span {
             display: inline-block;
-            width: 92px;
-            height: 32px;
-            line-height: 32px;
-            font-size: 12px;
+            width: 110px;
+            height: 39px;
+            line-height: 39px;
+            font-size: 14px;
             text-align: center;
-            border: 1px solid #fff;
             border-radius: 20px;
             cursor: pointer;
+            background-color: #49cdba;
+            color: #fff;
             &:first-child {
-              margin-right: 30px;
+              margin-right: 20px;
             }
           }
         }
       }
       .assets-list {
         position: relative;
-        .el-icon-circle-plus-outline {
+        .icon {
+          width: 20px;
           position: absolute;
           z-index: 1;
           right: 0;
-          top: 8px;
-          font-size: 20px;
+          top: 4px;
           cursor: pointer;
-          color: #53b8a9;
         }
+        .title {
+          color: #bac0d3;
+          span {
+            font-size: 12px;
+            color: #bac0d3;
+          }
+          .is-active {
+            font-size: 16px;
+            color: #3a3c44;
+          }
+        }
+
+        .assets-data {
+          margin: 25px 0 0 0;
+        }
+
         /deep/ .el-tabs {
           .el-tabs__header {
             margin-bottom: 1px;
@@ -266,9 +381,9 @@
             }
           }
         }
-        /deep/ .asset-list,
-        /deep/ .tx-list {
-          height: 190px;
+        .asset-list,
+        .tx-list {
+          height: 390px;
         }
       }
     }

@@ -1,5 +1,5 @@
 <template>
-  <div class="common-head">
+  <div class="common-head" :class="color ==='fff' ? '' :'common-bg'">
     <i class="el-icon-arrow-left" @click="handleBack"></i>
     <slot>
     </slot>
@@ -14,13 +14,16 @@
       return {};
     },
     props: {
+
+      color: {
+        type: String,
+        default: "fff"
+      },
+
       backControl: Boolean
     },
     methods: {
       handleBack() {
-        console.log("**back**");
-        console.log(this.backControl);
-        console.log(this.$goHome);
         if (this.backControl) {
           this.$emit("back");
         } else if (this.$goHome) {
@@ -37,7 +40,7 @@
     height: 70px;
     line-height: 70px;
     font-size: 14px;
-    box-shadow: 0 3px 4px rgba(135, 134, 134, 0.16);
+    //box-shadow: 0 3px 4px rgba(135, 134, 134, 0.16);
     position: relative;
     text-align: center;
     color: #3a3c44;
@@ -52,6 +55,14 @@
       left: 22px;
       top: 25px;
       font-weight: 600;
+    }
+  }
+
+  .common-bg {
+    background-color: #53B8A9;
+    color: #fff;
+    i {
+      color: #fff;
     }
   }
 </style>

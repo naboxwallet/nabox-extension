@@ -3,7 +3,7 @@
 ### Development
 ```
 npm install
-npm run dev
+npm run serve
 ```
 
 ### Build for Publishing
@@ -89,5 +89,100 @@ nabox
   .catch(error => {
     console.error(error);
   });
+```
+
+
+
+### Transactions are signed and broadcast
+
+```
+// parameter
+ let data = {
+          inputs: inOrOutputs.data.inputs,
+          outputs: inOrOutputs.data.outputs,
+          remarks: remark,
+          type: 16,
+          txData: this.contractCallData,
+          address: this.accountInfo.address,
+        };
+
+	// Send transaction
+	try {
+      let resData = await nabox.transactionSerialize(dataInfo);
+      console.log(resData); //return hash
+    } catch (err) {
+      console.log(err);
+    }
+```
+
+
+
+
+
+## Events that support binding
+
+
+
+### accountsChanged
+
+```
+nabox.on("accountsChanged", (error, payload) => {
+  console.log(error, payload);
+  if (error) {
+    throw error;
+  }
+});
+```
+
+
+
+### networkChanged
+
+```
+nabox.on("networkChanged", (error, payload) => {
+  console.log(error, payload);
+  if (error) {
+    throw error;
+  }
+});
+```
+
+
+
+### connect
+
+```
+nabox.on("connect", (error, payload) => {
+  console.log(error, payload);
+  if (error) {
+    throw error;
+  }
+});
+```
+
+
+
+### session_update
+
+```
+nabox.on("session_update", (error, payload) => {
+  console.log(error, payload);
+  if (error) {
+    throw error;
+  }
+});
+```
+
+
+
+### disconnect
+
+```
+nabox.on("disconnect", (error, payload) => {
+  console.log(error, payload);
+  if (error) {
+    throw error;
+  }
+});
 ```
 

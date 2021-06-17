@@ -1,18 +1,26 @@
 <template>
   <div class="home">
-    <Header :network="$store.state.network" @changeNetwork="changeNetwork"/>
+    <Header
+            :network="$store.state.network"
+            :accountName="chainAccount.name"
+            :proportionData="proportionData"
+            @show-app-modal="showAppModal"
+            @show-asset-modal="showAssetModal"
+            @changeNetwork="changeNetwork">
+    </Header>
 
-    <Overview
+    <!--<Overview
             @show-app-modal="showAppModal"
             @show-asset-modal="showAssetModal"
             :accountName="chainAccount.name"
             :balance="chainAccount['balance_' + $store.state.network]"
-    />
+    />-->
 
     <Assets
             @show-modal="showQrcode"
             :chain="chain"
             :accountInfo="accountInfo"
+            :chainList="chainList"
             :txList="txList"
             :txTotal="txTotal"
             :loading="assetsLoading"
@@ -46,15 +54,15 @@
     <!-- 资产总览弹窗 -->
     <Modal class="overview-modal" :visiable.sync="overviewModal" :title="$t('home.home12')">
       <div class="content-head">
-        <span>{{ $t("public.symbol") }}</span>
+        <span>{{ $t("public.chain") }}</span>
         <span>{{ $t("public.amount") }}</span>
         <span>{{ $t("public.percent") }}</span>
       </div>
       <div class="info">
-        <div class="info-item" v-for="(item, index) in list" :key="index">
-          <span>{{ item.symbol }}</span>
-          <span>${{ item.amount }}</span>
-          <span>{{ item.percent }}</span>
+        <div class="info-item" v-for="(item, index) in proportionData.list" :key="index">
+          <span>{{ item.chain }}</span>
+          <span>${{ item.price }}</span>
+          <span>{{ item.proportion !=='NaN' ? item.proportion : '--'  }} {{ item.proportion !=='NaN' ? '%' : ''  }}</span>
         </div>
       </div>
     </Modal>
@@ -69,12 +77,13 @@
 
 <script>
   import Header from "@/components/Header";
-  import Overview from "@/views/home/Overview";
   import Assets from "@/views/home/Assets";
   import Modal from "@/components/Modal";
   import QRCode from "qrcodejs2";
-  import {divisionDecimals, getStorage, Plus, Division, Times} from "@/utils/util";
+  import {divisionDecimals, getStorage, Plus, Division, Times, tofix} from "@/utils/util";
   import ExtensionPlatform from "@/utils/extension";
+  import axios from "axios";
+  import {config} from "@/config.js";
 
   export default {
     data() {
@@ -85,26 +94,32 @@
         currentAccount: [],
         address: "",
         appModal: false,
-        allowSites: [], //已连接应用
+        allowSites: [], //已连接应用, 每次打开弹窗会重新计算
         currentTab: {}, //当前网站tab信息
         showManualConnect: false,
         overviewModal: false,
         qrcodeModal: false,
-        chain: sessionStorage.getItem("chain") || "Ethereum",
+        chain: "",
         accountInfo: {},
         txList: [],
         txTotal: 0,
         assetsLoading: true,
         txLoading: true,
-        list: [],//资产总览data
+        proportionData: {total: 0, list: []},//资产总览data
         homeSetInterval: null,//定时器
+        chainList: {},//链列表
       };
     },
+
     watch: {
       "$store.state.network": {
         immediate: true,
         handler(val) {
+          //console.log(val);
           if (!val) return;
+          if (val === 'main' && this.chain === 'OKExChain') { //todo 临时的 主网上ok取消
+            this.chain = 'Ethereum'
+          }
           this.changeAccount();
         }
       },
@@ -113,8 +128,16 @@
           if (!val || val.id === old.id) return;
           this.changeAccount();
         }
+      },
+      "appModal": {
+        handler(val) {
+          if (val) {
+            this.allowSites = [];
+          }
+        }
       }
     },
+
     computed: {
       chainAccount() {
         return this.$store.getters.currentAccount;
@@ -124,18 +147,59 @@
         return account ? account.name : "";
       }
     },
+
     components: {
-      Header, Overview, Assets, Modal
+      Header, Assets, Modal,//Overview
     },
-    mounted() {
+
+    created() {
+      this.getLockInfo();
+      /*const nabox = await getStorage("nabox", {});
+      console.log(nabox);*/
+    },
+
+    async mounted() {
+      const nabox = await getStorage("nabox", {});
+      this.chain = nabox.chain || "Ethereum";
+
       this.homeSetInterval = setInterval(() => {
-        //this.update(this.chain);
-      }, 10000)
+        //this.update(this.chain); http://192.168.1.132:8083/nabox-api/api/sync/info
+        this.syncInfo();
+      }, 10000);
+      
+      setTimeout(async () => {
+        let accountList = this.$store.state.accountList;
+        for (let item of accountList) {
+          let resData = await this.getAccountOverview(item.pub);
+          if (resData.success) {
+            if (this.$store.state.network === 'main') {
+              item.balance_main = resData.data.total;
+            } else if (this.$store.state.network === 'beta') {
+              item.balance_beta = resData.data.total;
+            }
+          }
+        }
+        //console.log(accountList);
+        this.$store.commit("setAccount", accountList);
+      }, 1000);
     },
+
     destroyed() {
       clearInterval(this.homeSetInterval);
     },
+
     methods: {
+
+      //获取账户是否锁定
+      async getLockInfo() {
+        const nabox = await getStorage("nabox", {});
+        //console.log(nabox);
+        if (nabox.lock) {
+          this.$router.push({
+            path: "/lock",
+          });
+        }
+      },
 
       //选择网络
       async changeNetwork(network) {
@@ -143,13 +207,35 @@
         const currentAccount = accounts[network];
         this.currentAccount = currentAccount;
         await this.$store.dispatch("setNetwork", network);
-        this.update(this.chain);
+
+        const config = JSON.parse(localStorage.getItem("config"));
+        const nabox = await getStorage("nabox", {});
+        const chain = nabox.chain;
+        const chainId = config[network][chain].nativeId
+        nabox.chainId = "0x" +chainId.toString(16)
+        ExtensionPlatform.set({nabox})
+        //this.update(this.chain);
       },
 
+      //显示应用连接
       async showAppModal() {
         this.appModal = true;
         const nabox = await getStorage("nabox", {});
-        this.allowSites = nabox.allowSites || [];
+        //console.log(nabox);
+        if (nabox.allowSites) {
+          for (let items of nabox.allowSites) {
+            for (let item of items.approvedList) {
+              if (item.accountId === this.$store.getters.currentAccount.id) {
+                this.allowSites.push({
+                  approvedInfo: item,
+                  origin: items.origin
+                })
+              }
+            }
+          }
+        }
+
+        //this.allowSites = nabox.allowSites || [];
         chrome.tabs.query({active: true, currentWindow: true}, tabs => {
           //console.log(tabs, 12345);
           if (tabs.length && tabs[0].url) {
@@ -162,9 +248,39 @@
         });
       },
 
+      /**
+       * @disc: 获取账户总览数据
+       * @params: pubKey 公钥
+       * @date: 2021-01-28 15:46
+       * @author: Wave
+       */
+      async getAccountOverview(pubKey) {
+        try {
+          let newData = {url: "/wallet/chain/price", data: {"pubKey": pubKey}};
+          //console.log(newData);
+          const res = await this.$request(newData);
+          //console.log(res, "getAccountOverview");
+          if (res.code === 1000) {
+            let total = 0;
+            res.data.map(v => {
+              total = Plus(total, v.price).toString();
+            });
+            res.data.map(v => {
+              v.proportion = Times(Division(v.price, total).toFixed(4), 100).toString();
+              v.price = parseFloat(tofix(v.price, 2, -1));
+            });
+            return {success: true, data: {total: parseFloat(tofix(total, 2, -1)), list: res.data}};
+          } else {
+            return {success: false, data: res};
+          }
+        } catch (err) {
+          return {success: false, data: err};
+        }
+      },
+
       //显示资产总览
       async showAssetModal() {
-        this.update(this.chain);
+        //this.update(this.chain);
         this.overviewModal = true;
       },
 
@@ -177,19 +293,33 @@
 
       // 断开已连接网站
       async updateSites(site) {
+        //console.log(site);
         const nabox = await getStorage("nabox", {});
-        let index = 0;
-        this.allowSites.map((v, i) => {
-          if (v.origin === site) {
-            index = i;
+        /* const index = nabox.allowSites.findIndex(v => v.origin === site);
+        if (index > -1) {
+          nabox.allowSites.splice(index, 1)
+          ExtensionPlatform.set({nabox});
+        }
+        this.allowSites = [];
+        this.appModal = false; */
+
+        for (let item of nabox.allowSites) {
+          //console.log(item);
+          if (item.origin === site) {
+            // let newList = item.approvedList.filter(obj => obj.accountId !== this.$store.getters.currentAccount.id);
+            // item.approvedList = [];
+            item.approvedList = item.approvedList.filter(obj => obj.accountId !== this.$store.getters.currentAccount.id);
           }
-        });
-        this.allowSites.splice(index, 1);
-        nabox.allowSites = this.allowSites;
+        }
+        // let newllowSites = nabox.allowSites.filter(obj => obj.approvedList.length !== 0);
+        // nabox.allowSites = newllowSites;
+        //console.log(nabox);
         ExtensionPlatform.set({nabox});
+        this.allowSites = [];
         this.appModal = false;
       },
 
+      //显示二维码
       showQrcode() {
         this.qrcodeModal = true;
         if (document.getElementById("qrcode")) {
@@ -200,6 +330,7 @@
         });
       },
 
+      //华二维码
       generateCode() {
         let qrcode = new QRCode("qrcode", {
           text: this.address,
@@ -216,29 +347,41 @@
         const network = this.$store.state.network;
         const accounts = this.$store.getters.currentAccount;
         const currentAccount = accounts[network];
+        //console.log(network, accounts, currentAccount);
         this.currentAccount = currentAccount;
         this.update(this.chain);
       },
 
       // 切换链网络
-      changeSymbol(chain) {
-        //console.log(chain);
-        sessionStorage.setItem("chain", chain);
+      async changeSymbol(chain) {
+        this.assetsLoading = true;
+        const config = JSON.parse(localStorage.getItem("config"));
+        const network = this.$store.state.network;
+        const nabox = await getStorage("nabox", {});
+        nabox.chain = chain;
+        const chainId = config[network][chain].nativeId
+        nabox.chainId = "0x" +chainId.toString(16)
+        ExtensionPlatform.set({nabox})
+        // sessionStorage.setItem("chain", chain);
         this.chain = chain;
         this.update(chain);
 
-        if (this.homeSetInterval) {
+        /* if (this.homeSetInterval) {
           this.homeSetInterval = null;
         }
         this.homeSetInterval = setInterval(() => {
           //this.update(this.chain);
-        }, 10000)
+        }, 10000) */
       },
 
-      // 更新账户资产列表、交易列表
+      // 更新账户资产列表
       async update(chain) {
         //this.assetsLoading = true;
-        //this.txList = [];
+        if (!chain) {
+          const nabox = await getStorage("nabox", {});
+          chain = nabox.chain || "Ethereum";
+        }
+        this.txList = [];
         this.pageNumber = 1;
         this.txTotal = 0;
         this.address = this.currentAccount[chain];
@@ -247,27 +390,36 @@
           url: "/wallet/address/assets",
           data: {chain, address}
         });
+        //console.log(res, "update");
         if (res.code === 1000) {
           let total = 0;
           res.data.map(v => {
-            total = Plus(total, v.usdPrice).toFixed();
-            v.total = divisionDecimals(v.total, v.decimals);
-            v.amount = v.total
+            total = parseFloat(tofix(Plus(total, v.usdPrice), 2, -1));
+            v.total = parseFloat(tofix(divisionDecimals(v.total, v.decimals), 8, -1));
+            v.amount = v.total;
+            v.usdPrice = parseFloat(tofix(v.usdPrice, 2, -1));
+            v.percent = parseFloat(Times(Division(v.usdPrice, total), 100).toFixed(2)).toString() + '%';
           });
-
-          res.data.map(v => {
-            v.percent = parseFloat(Times(Division(v.usdPrice, total), 100).toFixed(2)).toString() + '%'
-          });
-          //console.log(res.data);
           this.list = res.data;
           this.accountInfo = {address, total, assetsList: res.data};
+          //console.log(this.accountInfo, "accountInfo");
         } else {
-          this.$message({message: res.msg, type: "error", duration: 1000});
+          this.$message({message: res.msg, type: "warning", duration: 3000});
         }
         this.assetsLoading = false;
+        let resData = await this.getAccountOverview(this.$store.getters.currentAccount.pub);
+        //console.log(resData);
+        if (resData.success) {
+          this.proportionData.total = resData.data.total;
+          this.proportionData.list = resData.data.list;
+        } else {
+          this.proportionData.total = 0;
+          this.proportionData.list = [];
+        }
         this.getTxList();
       },
 
+      //交易列表
       async getTxList() {
         //this.txLoading = true;
         if ((this.pageNumber - 1) * this.pageSize > this.txTotal) {
@@ -288,6 +440,7 @@
           res.data.records.map(v => {
             //v.createTime = formatTime(v.createTime * 1000);
             v.amount = divisionDecimals(v.amount, v.decimals);
+            v.chainInfo = this.chain
           });
           //this.txList = this.txList.concat(...res.data.records);
           this.txList = res.data.records;
@@ -320,7 +473,7 @@
       },
 
       toTransfer(path) {
-        const config = JSON.parse(sessionStorage.getItem("config"));
+        const config = JSON.parse(localStorage.getItem("config"));
         const network = this.$store.state.network;
         const {chainId: assetChainId, assetId} = config[network][this.chain];
         const query = {
@@ -333,10 +486,7 @@
       },
 
       toAddAsset() {
-        sessionStorage.setItem(
-          "visibleAssets",
-          JSON.stringify(this.accountInfo.assetsList)
-        );
+        sessionStorage.setItem("visibleAssets", JSON.stringify(this.accountInfo.assetsList));
         this.$router.push({
           path: "/add-asset",
           query: {
@@ -344,10 +494,29 @@
             chain: this.chain
           }
         });
+      },
+
+      /**
+       * @disc: 获取链信息
+       * @params:
+       * @date: 2021-04-26 15:04
+       * @author: Wave
+       */
+      async syncInfo() {
+        let newNetwork = (await ExtensionPlatform.get("network")).network || "main";
+        let baseUrl = config[newNetwork].BASE_URL;
+        let url = baseUrl + '/api/sync/info';
+        //console.log(url);
+        let resData = await axios.get(url);
+        //console.log(resData);
+        if (resData.data.code === 1000) {
+          //console.log(resData.data.data);
+          this.chainList = resData.data.data
+        }
       }
+
     }
-  };
-</script>
+  };</script>
 
 <style lang="less">
   .home {
