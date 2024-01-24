@@ -1,4 +1,6 @@
-## Nabox Chrome Extension_1.0
+## Nabox Chrome Extension
+
+Download: [Chrome Extension](https://chromewebstore.google.com/detail/nabox-wallet/nknhiehlklippafakaeklbeglecifhad)
 
 ### Development
 ```
